@@ -190,15 +190,16 @@ register_udata(lua_State *L, const char *tname,
 
 	luaL_newmetatable(L, tname);
 
-	luaL_register(L, NULL, metafunctions);
+	if (metafunctions != NULL)
+		luaL_register(L, NULL, metafunctions);
 
-	lua_pushstring(L, "__index");
-
-	/* XXX luaL_register is deprecated in version 5.2. */
-	lua_newtable(L);
-	luaL_register(L, NULL, methods);
-
-	lua_rawset(L, -3);
+	if (methods != NULL) {
+		/* XXX luaL_register is deprecated in version 5.2. */
+		lua_pushstring(L, "__index");
+		lua_newtable(L);
+		luaL_register(L, NULL, methods);
+		lua_rawset(L, -3);
+	}
 
 	lua_pop(L, 1);
 
