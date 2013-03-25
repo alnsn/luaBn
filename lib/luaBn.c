@@ -36,6 +36,7 @@
 #include <openssl/err.h>
 
 #include <assert.h>
+#include <stdbool.h>
 
 #define BN_METATABLE "bn.number"
 
@@ -53,6 +54,24 @@ struct BN
 	 */
 	char *str;
 };
+
+static BIGNUM *
+testbignum(lua_State *L, int narg)
+{
+	struct BN *udata;
+
+	/* XXX Use luaL_testudata(L, narg, BN_METATABLE) from 5.2. */
+	udata = (struct BN *)lua_touserdata(L, narg);
+
+	if (udata != NULL && lua_getmetatable(L, narg)) {
+		lua_getfield(L, LUA_REGISTRYINDEX, BN_METATABLE);
+		if (!lua_rawequal(L, -1, -2))
+			udata = NULL;
+		lua_pop(L, 2);
+	}
+
+	return (udata != NULL) ? &udata->bignum : NULL;
+}
 
 static inline int
 abs_index(lua_State *L, int narg)
@@ -151,6 +170,44 @@ l_tostring(lua_State *L)
 }
 
 static int
+l_add(lua_State *L)
+{
+	BIGNUM *o[2];
+	BIGNUM *r;
+	lua_Number n;
+	int narg;
+
+	if ((o[0] = testbignum(L, 1)) == NULL) {
+		narg = 1;
+		o[1] = luaBn_tobignum(L, 2);
+	} else if ((o[1] = testbignum(L, 2)) == NULL) {
+		narg = 2;
+	} else {
+		narg = 0;
+	}
+
+	/* XXX Check BN_copy, BN_add and BN_add_word return values. */
+	/* XXX what is faster, BN_copy+BN_add_word or BN_init+BN_???+BN_add? */
+	if (narg == 0) {
+		r = newbignum(L);
+		BN_add(r, o[0], o[1]);
+	} else {
+		n = lua_tonumber(L, narg);
+		if (n > 0 && n == (BN_ULONG)n) {
+			r = newbignum(L);
+			BN_copy(r, o[2-narg]);
+			BN_add_word(r, (BN_ULONG)n);
+		} else {
+			r = o[narg-1] = luaBn_tobignum(L, narg);
+			lua_pushvalue(L, narg);
+			BN_add(r, o[0], o[1]);
+		}
+	}
+
+	return 1;
+}
+
+static int
 l_gc(lua_State *L)
 {
 	struct BN *udata;
@@ -174,6 +231,7 @@ static luaL_reg bn_methods[] = {
 
 static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       l_gc       },
+	{ "__add",      l_add      },
 	{ "__tostring", l_tostring },
 	{ NULL, NULL}
 };
