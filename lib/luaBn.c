@@ -110,9 +110,41 @@ luaBn_tobignum(lua_State *L, int narg)
 	const char *s;
 	size_t z;
 	int len;
+#ifdef LUA_NUMBER_DOUBLE
+	lua_Number d;
+	int64_t n;
+#endif
 
 	switch (lua_type(L, narg)) {
-		case LUA_TNUMBER: /* XXX Don't convert to string. */
+		case LUA_TNUMBER:
+#ifdef LUA_NUMBER_DOUBLE
+			d = lua_tonumber(L, narg);
+
+			n = d;
+			if (n < 0)
+				n = -n;
+			assert(n >= 0);
+
+			/* 
+			 * XXX Check return values of BN_set_word,
+			 * BN_lshift and BN_add_word.
+			 */
+			narg = abs_index(L, narg);
+			bn = newbignum(L);
+			BN_set_word(bn, n & 0xffffffff);
+
+			n >>= 32;
+			if (n != 0) {
+				BN_lshift(bn, bn, 32);
+				BN_add_word(bn, n);
+			}
+
+			BN_set_negative(bn, d < 0);
+
+			lua_replace(L, narg);
+
+			return bn;
+#endif
 		case LUA_TSTRING:
 			narg = abs_index(L, narg);
 			s = lua_tostring(L, narg);
@@ -174,7 +206,7 @@ l_add(lua_State *L)
 {
 	BIGNUM *o[2];
 	BIGNUM *r;
-	lua_Number n;
+	lua_Number d;
 	int narg;
 
 	if ((o[0] = testbignum(L, 1)) == NULL) {
@@ -192,11 +224,11 @@ l_add(lua_State *L)
 		r = newbignum(L);
 		BN_add(r, o[0], o[1]);
 	} else {
-		n = lua_tonumber(L, narg);
-		if (n > 0 && n == (BN_ULONG)n) {
+		d = lua_tonumber(L, narg);
+		if (d > 0 && d == (BN_ULONG)d) {
 			r = newbignum(L);
 			BN_copy(r, o[2-narg]);
-			BN_add_word(r, (BN_ULONG)n);
+			BN_add_word(r, (BN_ULONG)d);
 		} else {
 			r = o[narg-1] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
