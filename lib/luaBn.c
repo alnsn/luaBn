@@ -145,6 +145,8 @@ luaBn_tobignum(lua_State *L, int narg)
 			lua_replace(L, narg);
 
 			return bn;
+#else
+			/* XXX Don't convert number to string. */
 #endif
 		case LUA_TSTRING:
 			narg = abs_index(L, narg);
