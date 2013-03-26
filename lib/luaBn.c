@@ -145,6 +145,8 @@ luaBn_tobignum(lua_State *L, int narg)
 			lua_replace(L, narg);
 
 			return bn;
+#elif LUA_NUMBER_FLOAT
+#pragma error "LUA_NUMBER_FLOAT is not supported."
 #else
 			/* XXX Don't convert number to string. */
 #endif
