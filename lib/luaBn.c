@@ -125,15 +125,16 @@ luaBn_tobignum(lua_State *L, int narg)
 				n = -n;
 			assert(n >= 0);
 
+			narg = abs_index(L, narg);
+			bn = newbignum(L);
+
 			/* 
 			 * XXX Check return values of BN_set_word,
 			 * BN_lshift and BN_add_word.
 			 */
-			narg = abs_index(L, narg);
-			bn = newbignum(L);
 			BN_set_word(bn, n & 0xffffffff);
-
 			n >>= 32;
+
 			if (n != 0) {
 				BN_lshift(bn, bn, 32);
 				BN_add_word(bn, n);
