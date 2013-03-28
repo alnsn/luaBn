@@ -198,7 +198,7 @@ init_modulo_val(lua_State *L)
 	lua_pushlstring(L, buf, n);
 	bn = stringtobignum(L, -1);
 	if (!BN_add_word(bn, 1))
-		bnerror(L, __func__);
+		bnerror(L, "BN_add_word in init_modulo_val");
 	lua_settable(L, LUA_REGISTRYINDEX);
 }
 
@@ -240,30 +240,36 @@ numbertobignum(lua_State *L, int narg)
 	rv = newbignum(L);
 	lua_replace(L, narg);
 
-	/* 
-	 * XXX Check return values of BN_zero, BN_set_word,
-	 * BN_lshift, BN_add_word, BN_sub_word and BN_sub.
-	 */
-	BN_zero(rv);
+	if (!BN_zero(rv))
+		bnerror(L, "BN_zero in numbertobignum");
+
 	for (i = nwords; i > 0; i--) {
 		shift = wshift * (i - 1);
 		w = (n >> shift) & wmask;
+
 		if (!BN_is_zero(rv)) {
-			BN_lshift(rv, rv, wshift);
-			BN_add_word(rv, w);
+			if (!BN_lshift(rv, rv, wshift))
+				bnerror(L, "BN_lshift in numbertobignum");
+			if (!BN_add_word(rv, w))
+				bnerror(L, "BN_add_word in numbertobignum");
 		} else if (w != 0) {
-			BN_set_word(rv, w);
+			if (!BN_set_word(rv, w))
+				bnerror(L, "BN_set_word in numbertobignum");
 		}
 	}
 
 	if (d < 0) {
 #if LUABN_UINT_MAX < ULONG_MAX
-		BN_sub_word(rv, LUABN_UINT_MAX + 1ul);
+		if (!BN_sub_word(rv, LUABN_UINT_MAX + 1ul))
+			bnerror(L, "BN_sub_word in numbertobignum");
 #elif LUABN_UINT_MAX == ULONG_MAX
-		BN_sub_word(rv, 1);
-		BN_sub_word(rv, LUABN_UINT_MAX);
+		if (!BN_sub_word(rv, 1))
+			bnerror(L, "BN_sub_word in numbertobignum");
+		if (!BN_sub_word(rv, LUABN_UINT_MAX))
+			bnerror(L, "BN_sub_word in numbertobignum");
 #else
-		BN_sub(rv, rv, get_modulo_val(L));
+		if (!BN_sub(rv, rv, get_modulo_val(L)))
+			bnerror(L, "BN_sub in numbertobignum");
 #endif
 	}
 
