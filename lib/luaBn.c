@@ -119,6 +119,23 @@ abs_index(lua_State *L, int narg)
 	    narg : lua_gettop(L) + 1 + narg;
 }
 
+static int
+bnerror(lua_State *L, const char *msg)
+{
+	const char *s;
+	unsigned long e;
+
+	e = ERR_get_error();
+	s = ERR_reason_error_string(e);
+
+	if (s != NULL)
+		return luaL_error(L, "%s: [%d] %s", msg, e, s);
+	else if (e != 0)
+		return luaL_error(L, "%s: [%d]", msg, e);
+	else
+		return luaL_error(L, "%s", msg);
+}
+
 /*
  * Creates a new BN object and pushes it to stack.
  */
@@ -161,7 +178,7 @@ stringtobignum(lua_State *L, int narg)
 		rvlen = BN_dec2bn(&rv, s);
 
 	if (rvlen == 0)
-		luaL_error(L, "unable to parse " BN_METATABLE);
+		bnerror(L, "unable to parse " BN_METATABLE);
 
 	return rv;
 }
@@ -180,7 +197,8 @@ init_modulo_val(lua_State *L)
 	lua_pushlightuserdata(L, &modulo_key);
 	lua_pushlstring(L, buf, n);
 	bn = stringtobignum(L, -1);
-	BN_add_word(bn, 1); /* XXX check return value. */
+	if (!BN_add_word(bn, 1))
+		bnerror(L, __func__);
 	lua_settable(L, LUA_REGISTRYINDEX);
 }
 
@@ -333,7 +351,7 @@ l_add(lua_State *L)
 	}
 
 	if (status == 0)
-		return luaL_error(L, BN_METATABLE ".__add failed");
+		return bnerror(L, BN_METATABLE ".__add");
 
 	return 1;
 }
