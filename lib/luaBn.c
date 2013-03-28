@@ -36,25 +36,62 @@
 #include <openssl/err.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define BN_METATABLE "bn.number"
 
 #define checkbn(L, narg) ((struct BN *)luaL_checkudata(L, (narg), BN_METATABLE))
 #define checkbignum(L, narg) (&checkbn(L, narg)->bignum)
 
+#ifdef LUA_NUMBER_DOUBLE
+
+typedef int64_t  luaBn_Int;
+typedef uint64_t luaBn_UInt;
+
+#define LUABN_UINT_MAX UINT64_MAX
+
+#elif LUA_NUMBER_FLOAT
+
+typedef int32_t  luaBn_Int;
+typedef uint32_t luaBn_UInt;
+
+#define LUABN_UINT_MAX UINT32_MAX
+
+#else /* lua_Number is an integral type. */
+
+typedef intmax_t  luaBn_Int;
+typedef uintmax_t luaBn_UInt;
+
+#define LUABN_UINT_MAX UINTMAX_MAX
+
+#endif
+
 struct BN
 {
 	BIGNUM bignum;
 
 	/*
-	 * Used to prevent a leak if lua_pushstring() fails.
-	 * Should be freed with OPENSSL_free() immediately after
-	 * a string is successfully pushed.
+	 * Used to prevent a leak if lua_pushstring() fails to push a string.
+	 * Should be freed with OPENSSL_free() and reset to NULL immediately
+	 * after the string is successfully pushed.
 	 */
 	char *str;
 };
 
+/*
+ * Unique keys to access values in the Lua registry.
+ */
+
+//static char ctx_key;
+
+#if LUABN_UINT_MAX > ULONG_MAX
+/* Modulo val is used to negate values in numbertobignum(). */
+static char modulo_key;
+#endif
+
+/* Return luaL_testudata(L, narg, BN_METATABLE). */
 static BIGNUM *
 testbignum(lua_State *L, int narg)
 {
@@ -99,6 +136,121 @@ newbignum(lua_State *L)
 	return &udata->bignum;
 }
 
+/* Replaces string at narg with bignum. */
+static BIGNUM *
+stringtobignum(lua_State *L, int narg)
+{
+	BIGNUM *rv;
+	const char *s;
+	size_t z;
+	int rvlen;
+
+	s = lua_tostring(L, narg);
+	assert(s != NULL);
+
+	narg = abs_index(L, narg);
+	rv = newbignum(L);
+	lua_replace(L, narg);
+
+	/* XXX "-0xdeadbeef" */
+	z = (s[0] == '0') ? 1 : 0;
+	if (s[z] == 'x' || s[z] == 'X')
+		rvlen = BN_hex2bn(&rv, s + z + 1);
+	else
+		rvlen = BN_dec2bn(&rv, s);
+
+	if (rvlen == 0)
+		luaL_error(L, "unable to parse " BN_METATABLE);
+
+	return rv;
+}
+
+#if LUABN_UINT_MAX > ULONG_MAX
+static void
+init_modulo_val(lua_State *L)
+{
+	char buf[64];
+	BIGNUM *bn;
+	int n;
+
+	n = sprintf(buf,"%ju", (uintmax_t)LUABN_UINT_MAX);
+	assert(n > 0 && n < sizeof(buf));
+
+	lua_pushlightuserdata(L, &modulo_key);
+	lua_pushlstring(L, buf, n);
+	bn = stringtobignum(L, -1);
+	BN_add_word(bn, 1); /* XXX check return value. */
+	lua_settable(L, LUA_REGISTRYINDEX);
+}
+
+static BIGNUM *
+get_modulo_val(lua_State *L)
+{
+	struct BN *bn;
+
+	lua_pushlightuserdata(L, &modulo_key);
+	lua_rawget(L, LUA_REGISTRYINDEX);
+	assert(checkbignum(L, -1) != NULL);
+	bn = (struct BN *)lua_touserdata(L, -1);
+	lua_pop(L, 1);
+
+	return &bn->bignum;
+}
+#endif
+
+/* Replaces number at narg with bignum. */
+static BIGNUM *
+numbertobignum(lua_State *L, int narg)
+{
+	BIGNUM *rv;
+	lua_Number d;
+	luaBn_UInt n, w;
+	size_t i;
+	int shift;
+
+	const int wshift = 32;
+	const unsigned long wmask = 0xffffffffu;
+	const size_t nwords = CHAR_BIT * sizeof(luaBn_UInt) / wshift;
+
+	assert(nwords > 0);
+
+	d = lua_tonumber(L, narg);
+	n = (luaBn_Int)d;
+
+	narg = abs_index(L, narg);
+	rv = newbignum(L);
+	lua_replace(L, narg);
+
+	/* 
+	 * XXX Check return values of BN_zero, BN_set_word,
+	 * BN_lshift, BN_add_word, BN_sub_word and BN_sub.
+	 */
+	BN_zero(rv);
+	for (i = nwords; i > 0; i--) {
+		shift = wshift * (i - 1);
+		w = (n >> shift) & wmask;
+		if (!BN_is_zero(rv)) {
+			BN_lshift(rv, rv, wshift);
+			BN_add_word(rv, w);
+		} else if (w != 0) {
+			BN_set_word(rv, w);
+		}
+	}
+
+	if (d < 0) {
+#if LUABN_UINT_MAX < ULONG_MAX
+		BN_sub_word(rv, LUABN_UINT_MAX + 1ul);
+#elif LUABN_UINT_MAX == ULONG_MAX
+		BN_sub_word(rv, 1);
+		BN_sub_word(rv, LUABN_UINT_MAX);
+#else
+		BN_sub(rv, rv, get_modulo_val(L));
+#endif
+	}
+
+	return rv;
+}
+
 /*
  * Converts an object at index narg to BIGNUM
  * and returns a pointer to that object.
@@ -106,73 +258,11 @@ newbignum(lua_State *L)
 BIGNUM *
 luaBn_tobignum(lua_State *L, int narg)
 {
-	BIGNUM *bn;
-	const char *s;
-	size_t z;
-	int len;
-#ifdef LUA_NUMBER_DOUBLE
-	lua_Number d;
-	int64_t n;
-#endif
 
 	switch (lua_type(L, narg)) {
-		case LUA_TNUMBER:
-#ifdef LUA_NUMBER_DOUBLE
-			d = lua_tonumber(L, narg);
-
-			n = d;
-			if (n < 0)
-				n = -n;
-			assert(n >= 0);
-
-			narg = abs_index(L, narg);
-			bn = newbignum(L);
-
-			/* 
-			 * XXX Check return values of BN_set_word,
-			 * BN_lshift and BN_add_word.
-			 */
-			BN_set_word(bn, n & 0xffffffff);
-			n >>= 32;
-
-			if (n != 0) {
-				BN_lshift(bn, bn, 32);
-				BN_add_word(bn, n);
-			}
-
-			BN_set_negative(bn, d < 0);
-
-			lua_replace(L, narg);
-
-			return bn;
-#elif LUA_NUMBER_FLOAT
-#pragma error "LUA_NUMBER_FLOAT is not supported."
-#else
-			/* XXX Don't convert number to string. */
-#endif
-		case LUA_TSTRING:
-			narg = abs_index(L, narg);
-			s = lua_tostring(L, narg);
-			assert(s != NULL);
-
-			bn = newbignum(L);
-
-			/* XXX "-0xdeadbeef" */
-			z = (s[0] == '0') ? 1 : 0;
-			if (s[z] == 'x' || s[z] == 'X')
-				len = BN_hex2bn(&bn, s + z + 1);
-			else
-				len = BN_dec2bn(&bn, s);
-
-			if (len == 0)
-				luaL_error(L, "unable to parse " BN_METATABLE);
-
-			lua_replace(L, narg);
-
-			return bn;
-
-		case LUA_TUSERDATA:
-			return checkbignum(L, narg);
+		case LUA_TNUMBER:   return numbertobignum(L, narg);
+		case LUA_TSTRING:   return stringtobignum(L, narg);
+		case LUA_TUSERDATA: return checkbignum(L, narg);
 	}
 
 	luaL_typerror(L, narg, "number, string or " BN_METATABLE);
@@ -308,6 +398,10 @@ int luaBn_open(lua_State *L)
 
 	/* XXX luaL_register is deprecated in version 5.2. */
 	luaL_register(L, "bn", bn_functions);
+
+#if LUABN_UINT_MAX > ULONG_MAX
+	init_modulo_val(L);
+#endif
 
 	return 1;
 }
