@@ -303,7 +303,7 @@ l_add(lua_State *L)
 	BIGNUM *o[2];
 	BIGNUM *r;
 	lua_Number d;
-	int narg;
+	int narg, status;
 
 	if ((o[0] = testbignum(L, 1)) == NULL) {
 		narg = 1;
@@ -314,22 +314,26 @@ l_add(lua_State *L)
 		narg = 0;
 	}
 
-	/* XXX Check BN_copy, BN_add and BN_add_word return values. */
+	status = 0;
+
 	if (narg == 0) {
 		r = newbignum(L);
-		BN_add(r, o[0], o[1]);
+		status = BN_add(r, o[0], o[1]);
 	} else {
 		d = lua_tonumber(L, narg);
 		if (d >= 0 && d == (BN_ULONG)d) {
 			r = newbignum(L);
-			BN_copy(r, o[2-narg]);
-			BN_add_word(r, (BN_ULONG)d);
+			if (BN_copy(r, o[2-narg]))
+				status = BN_add_word(r, (BN_ULONG)d);
 		} else {
 			r = o[narg-1] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
-			BN_add(r, o[0], o[1]);
+			status = BN_add(r, o[0], o[1]);
 		}
 	}
+
+	if (status == 0)
+		return luaL_error(L, BN_METATABLE ".__add failed");
 
 	return 1;
 }
