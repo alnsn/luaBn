@@ -320,7 +320,7 @@ l_add(lua_State *L)
 		BN_add(r, o[0], o[1]);
 	} else {
 		d = lua_tonumber(L, narg);
-		if (d > 0 && d == (BN_ULONG)d) {
+		if (d >= 0 && d == (BN_ULONG)d) {
 			r = newbignum(L);
 			BN_copy(r, o[2-narg]);
 			BN_add_word(r, (BN_ULONG)d);
