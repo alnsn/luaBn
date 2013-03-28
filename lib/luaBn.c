@@ -41,6 +41,7 @@
 #include <stdint.h>
 
 #define BN_METATABLE "bn.number"
+#define CTX_METATABLE "bn.ctx"
 
 #define checkbn(L, narg) ((struct BN *)luaL_checkudata(L, (narg), BN_METATABLE))
 #define checkbignum(L, narg) (&checkbn(L, narg)->bignum)
@@ -314,7 +315,6 @@ l_add(lua_State *L)
 	}
 
 	/* XXX Check BN_copy, BN_add and BN_add_word return values. */
-	/* XXX what is faster, BN_copy+BN_add_word or BN_init+BN_???+BN_add? */
 	if (narg == 0) {
 		r = newbignum(L);
 		BN_add(r, o[0], o[1]);
