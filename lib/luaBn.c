@@ -403,11 +403,16 @@ l_mul(lua_State *L)
 		status = BN_mul(r, o[0], o[1], ctx);
 	} else {
 		d = lua_tonumber(L, narg);
-		/* XXX negative d */
 		if (d >= 0 && d == (BN_ULONG)d) {
 			r = newbignum(L);
 			if (BN_copy(r, o[2-narg]))
 				status = BN_mul_word(r, (BN_ULONG)d);
+		} else if (-d > 0 && -d == (BN_ULONG)-d) {
+			r = newbignum(L);
+			if (BN_copy(r, o[2-narg])) {
+				BN_set_negative(r, !BN_is_negative(r));
+				status = BN_mul_word(r, (BN_ULONG)-d);
+			}
 		} else {
 			r = o[narg-1] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
