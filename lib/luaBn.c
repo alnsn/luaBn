@@ -317,6 +317,22 @@ l_tostring(lua_State *L)
 }
 
 static int
+l_unm(lua_State *L)
+{
+	BIGNUM *o, *r;
+
+	o = checkbignum(L, 1);
+	r = newbignum(L);
+
+	if (!BN_copy(r, o))
+		return bnerror(L, BN_METATABLE ".__unm");
+
+	BN_set_negative(r, !BN_is_negative(r));
+
+	return 1;
+}
+
+static int
 l_add(lua_State *L)
 {
 	BIGNUM *o[2];
@@ -448,6 +464,7 @@ static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
 	{ "__add",      l_add      },
 	{ "__mul",      l_mul      },
+	{ "__unm",      l_unm      },
 	{ "__tostring", l_tostring },
 	{ NULL, NULL}
 };
