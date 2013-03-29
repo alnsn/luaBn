@@ -84,8 +84,7 @@ struct BN
 /*
  * Unique keys to access values in the Lua registry.
  */
-
-//static char ctx_key;
+static char ctx_key;
 
 #if LUABN_UINT_MAX > ULONG_MAX
 /* Modulo val is used to negate values in numbertobignum(). */
@@ -183,25 +182,21 @@ stringtobignum(lua_State *L, int narg)
 	return rv;
 }
 
-#if LUABN_UINT_MAX > ULONG_MAX
-static void
-init_modulo_val(lua_State *L)
+static BN_CTX *
+get_ctx_val(lua_State *L)
 {
-	char buf[64];
-	BIGNUM *bn;
-	int n;
+	BN_CTX **udata;
 
-	n = sprintf(buf,"%ju", (uintmax_t)LUABN_UINT_MAX);
-	assert(n > 0 && n < sizeof(buf));
+	lua_pushlightuserdata(L, &ctx_key);
+	lua_rawget(L, LUA_REGISTRYINDEX);
+	assert(luaL_checkudata(L, -1, CTX_METATABLE) != NULL);
+	udata = (BN_CTX **)lua_touserdata(L, -1);
+	lua_pop(L, 1);
 
-	lua_pushlightuserdata(L, &modulo_key);
-	lua_pushlstring(L, buf, n);
-	bn = stringtobignum(L, -1);
-	if (!BN_add_word(bn, 1))
-		bnerror(L, "BN_add_word in init_modulo_val");
-	lua_settable(L, LUA_REGISTRYINDEX);
+	return *udata;
 }
 
+#if LUABN_UINT_MAX > ULONG_MAX
 static BIGNUM *
 get_modulo_val(lua_State *L)
 {
@@ -345,6 +340,7 @@ l_add(lua_State *L)
 		status = BN_add(r, o[0], o[1]);
 	} else {
 		d = lua_tonumber(L, narg);
+		/* XXX negative d */
 		if (d >= 0 && d == (BN_ULONG)d) {
 			r = newbignum(L);
 			if (BN_copy(r, o[2-narg]))
@@ -363,7 +359,52 @@ l_add(lua_State *L)
 }
 
 static int
-l_gc(lua_State *L)
+l_mul(lua_State *L)
+{
+	BIGNUM *o[2];
+	BIGNUM *r;
+	BN_CTX *ctx;
+	lua_Number d;
+	int narg, status;
+
+	if ((o[0] = testbignum(L, 1)) == NULL) {
+		narg = 1;
+		o[1] = luaBn_tobignum(L, 2);
+	} else if ((o[1] = testbignum(L, 2)) == NULL) {
+		narg = 2;
+	} else {
+		narg = 0;
+	}
+
+	status = 0;
+
+	if (narg == 0) {
+		r = newbignum(L);
+		ctx = get_ctx_val(L);
+		status = BN_mul(r, o[0], o[1], ctx);
+	} else {
+		d = lua_tonumber(L, narg);
+		/* XXX negative d */
+		if (d >= 0 && d == (BN_ULONG)d) {
+			r = newbignum(L);
+			if (BN_copy(r, o[2-narg]))
+				status = BN_mul_word(r, (BN_ULONG)d);
+		} else {
+			r = o[narg-1] = luaBn_tobignum(L, narg);
+			lua_pushvalue(L, narg);
+			ctx = get_ctx_val(L);
+			status = BN_mul(r, o[0], o[1], ctx);
+		}
+	}
+
+	if (status == 0)
+		return bnerror(L, BN_METATABLE ".__mul");
+
+	return 1;
+}
+
+static int
+gcbn(lua_State *L)
 {
 	struct BN *udata;
 
@@ -379,20 +420,42 @@ l_gc(lua_State *L)
 	return 0;
 }
 
+static int
+gcctx(lua_State *L)
+{
+	BN_CTX **udata;
+
+	udata = (BN_CTX **)luaL_checkudata(L, 1, CTX_METATABLE);
+
+	if (*udata != NULL)
+		BN_CTX_free(*udata);
+
+	lua_pushnil(L);
+	lua_setmetatable(L, 1);
+
+	return 0;
+}
+
 static luaL_reg bn_methods[] = {
 	{ "tostring", l_tostring },
 	{ NULL, NULL}
 };
 
 static luaL_reg bn_metafunctions[] = {
-	{ "__gc",       l_gc       },
+	{ "__gc",       gcbn       },
 	{ "__add",      l_add      },
+	{ "__mul",      l_mul      },
 	{ "__tostring", l_tostring },
 	{ NULL, NULL}
 };
 
 static luaL_reg bn_functions[] = {
 	{ "number", l_number },
+	{ NULL, NULL}
+};
+
+static luaL_reg ctx_metafunctions[] = {
+	{ "__gc", gcctx },
 	{ NULL, NULL}
 };
 
@@ -419,13 +482,57 @@ register_udata(lua_State *L, const char *tname,
 	return 0;
 }
 
+static void
+init_ctx_val(lua_State *L)
+{
+	BN_CTX **udata;
+
+	lua_pushlightuserdata(L, &ctx_key);
+
+	/* Store a pointer to BN_CTX because it's incomplete type. */
+	udata = (BN_CTX **)lua_newuserdata(L, sizeof(BN_CTX *));
+	*udata = NULL;
+
+	luaL_getmetatable(L, CTX_METATABLE);
+	lua_setmetatable(L, -2);
+
+	lua_settable(L, LUA_REGISTRYINDEX);
+
+	*udata = BN_CTX_new();
+	if (*udata == NULL)
+		bnerror(L, __func__);
+}
+
+#if LUABN_UINT_MAX > ULONG_MAX
+static void
+init_modulo_val(lua_State *L)
+{
+	char buf[64];
+	BIGNUM *bn;
+	int n;
+
+	n = sprintf(buf,"%ju", (uintmax_t)LUABN_UINT_MAX);
+	assert(n > 0 && n < sizeof(buf));
+
+	lua_pushlightuserdata(L, &modulo_key);
+	lua_pushlstring(L, buf, n);
+	bn = stringtobignum(L, -1);
+	if (!BN_add_word(bn, 1))
+		bnerror(L, "BN_add_word in init_modulo_val");
+	lua_settable(L, LUA_REGISTRYINDEX);
+}
+#endif
+
 int luaBn_open(lua_State *L)
 {
 
 	register_udata(L, BN_METATABLE, bn_metafunctions, bn_methods);
+	register_udata(L, CTX_METATABLE, ctx_metafunctions, NULL);
 
 	/* XXX luaL_register is deprecated in version 5.2. */
 	luaL_register(L, "bn", bn_functions);
+
+	init_ctx_val(L);
 
 #if LUABN_UINT_MAX > ULONG_MAX
 	init_modulo_val(L);
