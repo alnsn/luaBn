@@ -525,7 +525,7 @@ init_ctx_val(lua_State *L)
 
 	*udata = BN_CTX_new();
 	if (*udata == NULL)
-		bnerror(L, __func__);
+		bnerror(L, "BN_CTX_new in init_ctx_val");
 }
 
 #if LUABN_UINT_MAX > ULONG_MAX
