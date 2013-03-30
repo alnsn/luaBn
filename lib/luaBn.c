@@ -43,6 +43,7 @@
 #define BN_METATABLE "bn.number"
 #define CTX_METATABLE "bn.ctx"
 
+#define getbn(L, narg) ((struct BN *)lua_touserdata(L, (narg)))
 #define checkbn(L, narg) ((struct BN *)luaL_checkudata(L, (narg), BN_METATABLE))
 #define checkbignum(L, narg) (&checkbn(L, narg)->bignum)
 
@@ -91,14 +92,16 @@ static char ctx_key;
 static char modulo_key;
 #endif
 
-/* Return luaL_testudata(L, narg, BN_METATABLE). */
+/* 
+ * Aka luaL_testudata(L, narg, BN_METATABLE) but it also casts
+ * from struct BN to BIGNUM.
+ */
 static BIGNUM *
 testbignum(lua_State *L, int narg)
 {
 	struct BN *udata;
 
-	/* XXX Use luaL_testudata(L, narg, BN_METATABLE) from 5.2. */
-	udata = (struct BN *)lua_touserdata(L, narg);
+	udata = getbn(L, narg);
 
 	if (udata != NULL && lua_getmetatable(L, narg)) {
 		lua_getfield(L, LUA_REGISTRYINDEX, BN_METATABLE);
