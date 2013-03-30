@@ -44,6 +44,7 @@
 #define CTX_METATABLE "bn.ctx"
 
 #define checkbn(L, narg) ((struct BN *)luaL_checkudata(L, (narg), BN_METATABLE))
+#define checkbignum(L, narg) (&checkbn(L, narg)->bignum)
 
 #ifdef LUA_NUMBER_DOUBLE
 
@@ -89,16 +90,6 @@ static char ctx_key;
 /* Modulo val is used to negate values in numbertobignum(). */
 static char modulo_key;
 #endif
-
-static inline BIGNUM *
-checkbignum(lua_State *L, int narg)
-{
-	struct BN *udata;
-
-	udata = checkbn(L, narg);
-	
-	return (udata != NULL) ? &udata->bignum : NULL;
-}
 
 /* Return luaL_testudata(L, narg, BN_METATABLE). */
 static BIGNUM *
