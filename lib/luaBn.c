@@ -443,7 +443,7 @@ l_mod(lua_State *L)
 
 	/*
 	 * Unlike many other operations (e.g. BN_add or BN_mul),
-	 * documentation for BN_mod doesn't specify that the result
+	 * documentation for BN_div doesn't specify that the result
 	 * may be the same variable as one of the operands.
 	 * Thus, always allocate a new BIGNUM object for the result.
 	 */
@@ -473,7 +473,7 @@ l_mod(lua_State *L)
 
 	if (!done) {
 		ctx = get_ctx_val(L);
-		status = BN_mod(bn[0], bn[1], bn[2], ctx);
+		status = BN_div(NULL, bn[0], bn[1], bn[2], ctx);
 	}
 
 	if (status == 0)
