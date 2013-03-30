@@ -131,9 +131,9 @@ bnerror(lua_State *L, const char *msg)
 	s = ERR_reason_error_string(e);
 
 	if (s != NULL)
-		return luaL_error(L, "%s: [%d] %s", msg, e, s);
+		return luaL_error(L, "%s: %s", msg, s);
 	else if (e != 0)
-		return luaL_error(L, "%s: [%d]", msg, e);
+		return luaL_error(L, "%s: strings not loaded, code %d", msg, e);
 	else
 		return luaL_error(L, "%s", msg);
 }
@@ -432,6 +432,57 @@ l_mul(lua_State *L)
 }
 
 static int
+l_mod(lua_State *L)
+{
+	BIGNUM *bn[3]; /* bn[0] = bn[1] % bn[2] */
+	BN_CTX *ctx;
+	BN_ULONG rem;
+	lua_Number d;
+	int status;
+	bool done;
+
+	/*
+	 * Unlike many other operations (e.g. BN_add or BN_mul),
+	 * documentation for BN_mod doesn't specify that the result
+	 * may be the same variable as one of the operands.
+	 * Thus, always allocate a new BIGNUM object for the result.
+	 */
+	bn[0] = newbignum(L);
+
+	status = 0;
+	done = false;
+
+	if ((bn[2] = testbignum(L, 2)) != NULL) {
+		bn[1] = luaBn_tobignum(L, 1);
+	} else {
+		assert(testbignum(L, 1) != NULL);
+		bn[1] = &getbn(L, 1)->bignum;
+
+		d = lua_tonumber(L, 2);
+		if (d > 0 && d == (BN_ULONG)d) {
+			rem = BN_mod_word(bn[1], (BN_ULONG)d);
+			if (rem != (BN_ULONG)-1) {
+				status = BN_set_word(bn[0], rem);
+				done = true;
+			}
+		/* XXX } else if (-d > 0 && -d == (BN_ULONG)-d) { */
+		} else {
+			bn[2] = luaBn_tobignum(L, 2);
+		}
+	}
+
+	if (!done) {
+		ctx = get_ctx_val(L);
+		status = BN_mod(bn[0], bn[1], bn[2], ctx);
+	}
+
+	if (status == 0)
+		return bnerror(L, BN_METATABLE ".__mod");
+
+	return 1;
+}
+
+static int
 gcbn(lua_State *L)
 {
 	struct BN *udata;
@@ -472,6 +523,7 @@ static luaL_reg bn_methods[] = {
 static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
 	{ "__add",      l_add      },
+	{ "__mod",      l_mod      },
 	{ "__mul",      l_mul      },
 	{ "__unm",      l_unm      },
 	{ "__tostring", l_tostring },
