@@ -432,6 +432,69 @@ l_mul(lua_State *L)
 }
 
 static int
+l_div(lua_State *L)
+{
+	BIGNUM *bn[3]; /* bn[0] = bn[1] / bn[2] */
+	BN_CTX *ctx;
+	BN_ULONG n, rem;
+	lua_Number d;
+	int status;
+	bool done;
+
+	/*
+	 * Unlike many other operations (e.g. BN_add or BN_mul),
+	 * documentation for BN_div doesn't specify that the result
+	 * may be the same variable as one of the operands.
+	 * Thus, always allocate a new BIGNUM object for the result.
+	 */
+	bn[0] = newbignum(L);
+
+	status = 0;
+	done = false;
+
+	if ((bn[2] = testbignum(L, 2)) != NULL) {
+		bn[1] = luaBn_tobignum(L, 1);
+	} else {
+		assert(testbignum(L, 1) != NULL);
+		bn[1] = &getbn(L, 1)->bignum;
+
+		d = lua_tonumber(L, 2);
+		if (d > 0 && d == (BN_ULONG)d) {
+			n = (BN_ULONG)d;
+			done = true;
+		} else if (-d > 0 && -d == (BN_ULONG)-d) {
+			n = (BN_ULONG)-d;
+			done = true;
+		} else {
+			bn[2] = luaBn_tobignum(L, 2);
+		}
+
+		if (done && BN_copy(bn[0], bn[1])) {
+			if (-d > 0)
+				BN_set_negative(bn[0], !BN_is_negative(bn[0]));
+			rem = BN_div_word(bn[0], n);
+			/*
+			 * Code inspection shows that BN_div_word() doesn't
+			 * set error only when n == 0. Therefore, bnerror()
+			 * call is valid if BN_div_word() fails.
+			 */
+			assert(n != 0);
+			status = (rem != (BN_ULONG)-1);
+		}
+	}
+
+	if (!done) {
+		ctx = get_ctx_val(L);
+		status = BN_div(bn[0], NULL, bn[1], bn[2], ctx);
+	}
+
+	if (status == 0)
+		return bnerror(L, BN_METATABLE ".__div");
+
+	return 1;
+}
+
+static int
 l_mod(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] % bn[2] */
@@ -470,7 +533,12 @@ l_mod(lua_State *L)
 		}
 
 		if (done) {
+			/*
+			 * Code inspection shows that BN_mod_word() fails
+			 * only when n == 0.
+			 */
 			rem = BN_mod_word(bn[1], n);
+			assert(rem < n);
 			if (rem != (BN_ULONG)-1)
 				status = BN_set_word(bn[0], rem);
 			if (status != 0)
@@ -530,6 +598,7 @@ static luaL_reg bn_methods[] = {
 static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
 	{ "__add",      l_add      },
+	{ "__div",      l_div      },
 	{ "__mod",      l_mod      },
 	{ "__mul",      l_mul      },
 	{ "__unm",      l_unm      },
