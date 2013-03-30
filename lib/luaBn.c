@@ -461,10 +461,9 @@ l_mod(lua_State *L)
 		d = lua_tonumber(L, 2);
 		if (d > 0 && d == (BN_ULONG)d) {
 			rem = BN_mod_word(bn[1], (BN_ULONG)d);
-			if (rem != (BN_ULONG)-1) {
+			if (rem != (BN_ULONG)-1)
 				status = BN_set_word(bn[0], rem);
-				done = true;
-			}
+			done = true;
 		/* XXX } else if (-d > 0 && -d == (BN_ULONG)-d) { */
 		} else {
 			bn[2] = luaBn_tobignum(L, 2);
