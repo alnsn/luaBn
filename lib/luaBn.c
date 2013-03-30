@@ -389,12 +389,12 @@ l_mul(lua_State *L)
 	lua_Number d;
 	int narg, status;
 
-	if ((bn[2] = testbignum(L, 2)) == NULL) {
-		narg = 2;
-		assert(testbignum(L, 1) != NULL);
-		bn[1] = &getbn(L, 1)->bignum;
-	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
+	if ((bn[1] = testbignum(L, 1)) == NULL) {
 		narg = 1;
+		assert(testbignum(L, 2) != NULL);
+		bn[2] = &getbn(L, 2)->bignum;
+	} else if ((bn[2] = testbignum(L, 2)) == NULL) {
+		narg = 2;
 	} else {
 		narg = 0;
 	}
