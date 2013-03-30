@@ -324,7 +324,8 @@ l_unm(lua_State *L)
 {
 	BIGNUM *o, *r;
 
-	o = checkbignum(L, 1);
+	assert(testbignum(L, 1) != NULL);
+	o = &getbn(L, 1)->bignum;
 	r = newbignum(L);
 
 	if (!BN_copy(r, o))
@@ -345,7 +346,8 @@ l_add(lua_State *L)
 
 	if ((o[0] = testbignum(L, 1)) == NULL) {
 		narg = 1;
-		o[1] = luaBn_tobignum(L, 2);
+		assert(testbignum(L, 2) != NULL);
+		o[1] = &getbn(L, 2)->bignum;
 	} else if ((o[1] = testbignum(L, 2)) == NULL) {
 		narg = 2;
 	} else {
@@ -391,7 +393,8 @@ l_mul(lua_State *L)
 
 	if ((o[0] = testbignum(L, 1)) == NULL) {
 		narg = 1;
-		o[1] = luaBn_tobignum(L, 2);
+		assert(testbignum(L, 2) != NULL);
+		o[1] = &getbn(L, 2)->bignum;
 	} else if ((o[1] = testbignum(L, 2)) == NULL) {
 		narg = 2;
 	} else {
