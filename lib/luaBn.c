@@ -436,7 +436,7 @@ l_mod(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] % bn[2] */
 	BN_CTX *ctx;
-	BN_ULONG rem;
+	BN_ULONG n, rem;
 	lua_Number d;
 	int status;
 	bool done;
@@ -460,13 +460,21 @@ l_mod(lua_State *L)
 
 		d = lua_tonumber(L, 2);
 		if (d > 0 && d == (BN_ULONG)d) {
-			rem = BN_mod_word(bn[1], (BN_ULONG)d);
-			if (rem != (BN_ULONG)-1)
-				status = BN_set_word(bn[0], rem);
+			n = (BN_ULONG)d;
 			done = true;
-		/* XXX } else if (-d > 0 && -d == (BN_ULONG)-d) { */
+		} else if (-d > 0 && -d == (BN_ULONG)-d) {
+			n = (BN_ULONG)-d;
+			done = true;
 		} else {
 			bn[2] = luaBn_tobignum(L, 2);
+		}
+
+		if (done) {
+			rem = BN_mod_word(bn[1], n);
+			if (rem != (BN_ULONG)-1)
+				status = BN_set_word(bn[0], rem);
+			if (status != 0)
+				BN_set_negative(bn[0], BN_is_negative(bn[1]));
 		}
 	}
 
