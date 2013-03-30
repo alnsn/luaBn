@@ -339,17 +339,16 @@ l_unm(lua_State *L)
 static int
 l_add(lua_State *L)
 {
-	BIGNUM *o[2];
-	BIGNUM *r;
+	BIGNUM *bn[3]; /* bn[0] = bn[1] + bn[2] */
 	lua_Number d;
 	int narg, status;
 
-	if ((o[0] = testbignum(L, 1)) == NULL) {
-		narg = 1;
-		assert(testbignum(L, 2) != NULL);
-		o[1] = &getbn(L, 2)->bignum;
-	} else if ((o[1] = testbignum(L, 2)) == NULL) {
+	if ((bn[2] = testbignum(L, 2)) == NULL) {
 		narg = 2;
+		assert(testbignum(L, 1) != NULL);
+		bn[1] = &getbn(L, 1)->bignum;
+	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
+		narg = 1;
 	} else {
 		narg = 0;
 	}
@@ -357,22 +356,22 @@ l_add(lua_State *L)
 	status = 0;
 
 	if (narg == 0) {
-		r = newbignum(L);
-		status = BN_add(r, o[0], o[1]);
+		bn[0] = newbignum(L);
+		status = BN_add(bn[0], bn[1], bn[2]);
 	} else {
 		d = lua_tonumber(L, narg);
 		if (d > 0 && d == (BN_ULONG)d) {
-			r = newbignum(L);
-			if (BN_copy(r, o[2-narg]))
-				status = BN_add_word(r, (BN_ULONG)d);
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg]))
+				status = BN_add_word(bn[0], (BN_ULONG)d);
 		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			r = newbignum(L);
-			if (BN_copy(r, o[2-narg]))
-				status = BN_sub_word(r, (BN_ULONG)-d);
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg]))
+				status = BN_sub_word(bn[0], (BN_ULONG)-d);
 		} else {
-			r = o[narg-1] = luaBn_tobignum(L, narg);
+			bn[0] = bn[narg] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
-			status = BN_add(r, o[0], o[1]);
+			status = BN_add(bn[0], bn[1], bn[2]);
 		}
 	}
 
@@ -385,18 +384,17 @@ l_add(lua_State *L)
 static int
 l_mul(lua_State *L)
 {
-	BIGNUM *o[2];
-	BIGNUM *r;
+	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] */
 	BN_CTX *ctx;
 	lua_Number d;
 	int narg, status;
 
-	if ((o[0] = testbignum(L, 1)) == NULL) {
-		narg = 1;
-		assert(testbignum(L, 2) != NULL);
-		o[1] = &getbn(L, 2)->bignum;
-	} else if ((o[1] = testbignum(L, 2)) == NULL) {
+	if ((bn[2] = testbignum(L, 2)) == NULL) {
 		narg = 2;
+		assert(testbignum(L, 1) != NULL);
+		bn[1] = &getbn(L, 1)->bignum;
+	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
+		narg = 1;
 	} else {
 		narg = 0;
 	}
@@ -404,26 +402,26 @@ l_mul(lua_State *L)
 	status = 0;
 
 	if (narg == 0) {
-		r = newbignum(L);
+		bn[0] = newbignum(L);
 		ctx = get_ctx_val(L);
-		status = BN_mul(r, o[0], o[1], ctx);
+		status = BN_mul(bn[0], bn[1], bn[2], ctx);
 	} else {
 		d = lua_tonumber(L, narg);
 		if (d > 0 && d == (BN_ULONG)d) {
-			r = newbignum(L);
-			if (BN_copy(r, o[2-narg]))
-				status = BN_mul_word(r, (BN_ULONG)d);
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg]))
+				status = BN_mul_word(bn[0], (BN_ULONG)d);
 		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			r = newbignum(L);
-			if (BN_copy(r, o[2-narg])) {
-				BN_set_negative(r, !BN_is_negative(r));
-				status = BN_mul_word(r, (BN_ULONG)-d);
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg])) {
+				BN_set_negative(bn[0], !BN_is_negative(bn[0]));
+				status = BN_mul_word(bn[0], (BN_ULONG)-d);
 			}
 		} else {
-			r = o[narg-1] = luaBn_tobignum(L, narg);
+			bn[0] = bn[narg] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
 			ctx = get_ctx_val(L);
-			status = BN_mul(r, o[0], o[1], ctx);
+			status = BN_mul(bn[0], bn[1], bn[2], ctx);
 		}
 	}
 
