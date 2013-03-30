@@ -204,7 +204,7 @@ get_modulo_val(lua_State *L)
 
 	lua_pushlightuserdata(L, &modulo_key);
 	lua_rawget(L, LUA_REGISTRYINDEX);
-	assert(checkbignum(L, -1) != NULL);
+	assert(testbignum(L, -1) != NULL);
 	bn = (struct BN *)lua_touserdata(L, -1);
 	lua_pop(L, 1);
 
