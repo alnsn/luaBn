@@ -15,4 +15,3 @@ LDADD+=		-lluaBn -lcrypto
 LDFLAGS+=	-L ${.OBJDIR}/../lib
 
 .include <mkc.lib.mk>
-
