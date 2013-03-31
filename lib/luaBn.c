@@ -115,12 +115,30 @@ testbignum(lua_State *L, int narg)
 	return (udata != NULL) ? &udata->bignum : NULL;
 }
 
+/*
+ * Converts absolute or relative stack index to absolute index.
+ */
 static inline int
-abs_index(lua_State *L, int narg)
+absindex(lua_State *L, int narg)
 {
 
 	return (narg > 0 || narg <= LUA_REGISTRYINDEX) ?
 	    narg : lua_gettop(L) + 1 + narg;
+}
+
+/*
+ * If abs(d) can be converted BN_ULONG, returns abs(d). Otherwise, returns 0.
+ */
+static inline BN_ULONG
+absnumber(lua_Number d)
+{
+
+	if (d > 0 && d == (BN_ULONG)d)
+		return (BN_ULONG)d;
+	else if (-d > 0 && -d == (BN_ULONG)-d)
+		return (BN_ULONG)-d;
+	else
+		return 0;
 }
 
 static int
@@ -170,7 +188,7 @@ stringtobignum(lua_State *L, int narg)
 	s = lua_tostring(L, narg);
 	assert(s != NULL);
 
-	narg = abs_index(L, narg);
+	narg = absindex(L, narg);
 	rv = newbignum(L);
 	lua_replace(L, narg);
 
@@ -236,7 +254,7 @@ numbertobignum(lua_State *L, int narg)
 	d = lua_tonumber(L, narg);
 	n = (luaBn_Int)d;
 
-	narg = abs_index(L, narg);
+	narg = absindex(L, narg);
 	rv = newbignum(L);
 	lua_replace(L, narg);
 
@@ -338,10 +356,12 @@ l_unm(lua_State *L)
 	return 1;
 }
 
+/* Implementation of l_add and l_sub. */
 static int
-l_add(lua_State *L)
+addsub(lua_State *L, int sign, const char *errmsg)
 {
-	BIGNUM *bn[3]; /* bn[0] = bn[1] + bn[2] */
+	BIGNUM *bn[3]; /* bn[0] = bn[1] +/- bn[2] */
+	BN_ULONG n;
 	lua_Number d;
 	int narg, status;
 
@@ -359,29 +379,48 @@ l_add(lua_State *L)
 
 	if (narg == 0) {
 		bn[0] = newbignum(L);
-		status = BN_add(bn[0], bn[1], bn[2]);
+		status = sign > 0 ? BN_add(bn[0], bn[1], bn[2])
+		                  : BN_sub(bn[0], bn[1], bn[2]);
 	} else {
 		d = lua_tonumber(L, narg);
+		n = absnumber(d);
 
-		if (d > 0 && d == (BN_ULONG)d) {
-			bn[0] = newbignum(L);
-			if (BN_copy(bn[0], bn[3-narg]))
-				status = BN_add_word(bn[0], (BN_ULONG)d);
-		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			bn[0] = newbignum(L);
-			if (BN_copy(bn[0], bn[3-narg]))
-				status = BN_sub_word(bn[0], (BN_ULONG)-d);
-		} else {
+		if (n == 0) {
 			bn[0] = bn[narg] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
-			status = BN_add(bn[0], bn[1], bn[2]);
+			status = sign > 0 ? BN_add(bn[0], bn[1], bn[2])
+			                  : BN_sub(bn[0], bn[1], bn[2]);
+		} else {
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg])) {
+				if (sign * d > 0)
+					status = BN_add_word(bn[0], n);
+				else
+					status = BN_sub_word(bn[0], n);
+				if (sign * narg == -1)
+					negatebignum(bn[0]);
+			}
 		}
 	}
 
 	if (status == 0)
-		return bnerror(L, BN_METATABLE ".__add");
+		return bnerror(L, errmsg);
 
 	return 1;
+}
+
+static int
+l_add(lua_State *L)
+{
+
+	return addsub(L, 1, BN_METATABLE ".__add");
+}
+
+static int
+l_sub(lua_State *L)
+{
+
+	return addsub(L, -1, BN_METATABLE ".__sub");
 }
 
 static int
@@ -411,13 +450,7 @@ l_mul(lua_State *L)
 		status = BN_mul(bn[0], bn[1], bn[2], ctx);
 	} else {
 		d = lua_tonumber(L, narg);
-
-		if (d > 0 && d == (BN_ULONG)d)
-			n = (BN_ULONG)d;
-		else if (-d > 0 && -d == (BN_ULONG)-d)
-			n = (BN_ULONG)-d;
-		else
-			n = 0;
+		n = absnumber(d);
 
 		if (n == 0) {
 			bn[0] = bn[narg] = luaBn_tobignum(L, narg);
@@ -448,7 +481,6 @@ l_div(lua_State *L)
 	BN_ULONG n, rem;
 	lua_Number d;
 	int status;
-	bool fast;
 
 	/*
 	 * Unlike many other operations (e.g. BN_add or BN_mul),
@@ -458,8 +490,8 @@ l_div(lua_State *L)
 	 */
 	bn[0] = newbignum(L);
 
+	n = 0;
 	status = 0;
-	fast = false;
 
 	if ((bn[2] = testbignum(L, 2)) != NULL) {
 		bn[1] = luaBn_tobignum(L, 1);
@@ -468,18 +500,11 @@ l_div(lua_State *L)
 		bn[1] = &getbn(L, 1)->bignum;
 
 		d = lua_tonumber(L, 2);
+		n = absnumber(d);
 
-		if (d > 0 && d == (BN_ULONG)d) {
-			n = (BN_ULONG)d;
-			fast = true;
-		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			n = (BN_ULONG)-d;
-			fast = true;
-		} else {
+		if (n == 0) {
 			bn[2] = luaBn_tobignum(L, 2);
-		}
-
-		if (fast && BN_copy(bn[0], bn[1])) {
+		} else if (BN_copy(bn[0], bn[1])) {
 			if (-d > 0)
 				negatebignum(bn[0]);
 			rem = BN_div_word(bn[0], n);
@@ -488,12 +513,11 @@ l_div(lua_State *L)
 			 * set error only when n == 0. Therefore, bnerror()
 			 * call is valid if BN_div_word() fails.
 			 */
-			assert(n != 0);
 			status = (rem != (BN_ULONG)-1);
 		}
 	}
 
-	if (!fast) {
+	if (n == 0) {
 		ctx = get_ctx_val(L);
 		status = BN_div(bn[0], NULL, bn[1], bn[2], ctx);
 	}
@@ -512,7 +536,6 @@ l_mod(lua_State *L)
 	BN_ULONG n, rem;
 	lua_Number d;
 	int status;
-	bool fast;
 
 	/*
 	 * Unlike many other operations (e.g. BN_add or BN_mul),
@@ -522,8 +545,8 @@ l_mod(lua_State *L)
 	 */
 	bn[0] = newbignum(L);
 
+	n = 0;
 	status = 0;
-	fast = false;
 
 	if ((bn[2] = testbignum(L, 2)) != NULL) {
 		bn[1] = luaBn_tobignum(L, 1);
@@ -532,32 +555,24 @@ l_mod(lua_State *L)
 		bn[1] = &getbn(L, 1)->bignum;
 
 		d = lua_tonumber(L, 2);
+		n = absnumber(d);
 
-		if (d > 0 && d == (BN_ULONG)d) {
-			n = (BN_ULONG)d;
-			fast = true;
-		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			n = (BN_ULONG)-d;
-			fast = true;
-		} else {
+		if (n == 0) {
 			bn[2] = luaBn_tobignum(L, 2);
-		}
-
-		if (fast) {
-			/*
-			 * Code inspection shows that BN_mod_word() fails
-			 * only when n == 0.
-			 */
+		} else {
 			rem = BN_mod_word(bn[1], n);
+			/*
+			 * Code inspection shows that BN_mod_word() never
+			 * fails for n != 0.
+			 */
 			assert(rem < n);
-			if (rem != (BN_ULONG)-1)
-				status = BN_set_word(bn[0], rem);
+			status = BN_set_word(bn[0], rem);
 			if (status != 0)
 				BN_set_negative(bn[0], BN_is_negative(bn[1]));
 		}
 	}
 
-	if (!fast) {
+	if (n == 0) {
 		ctx = get_ctx_val(L);
 		status = BN_div(NULL, bn[0], bn[1], bn[2], ctx);
 	}
@@ -612,6 +627,7 @@ static luaL_reg bn_metafunctions[] = {
 	{ "__div",      l_div      },
 	{ "__mod",      l_mod      },
 	{ "__mul",      l_mul      },
+	{ "__sub",      l_sub      },
 	{ "__unm",      l_unm      },
 	{ "__tostring", l_tostring },
 	{ NULL, NULL}
