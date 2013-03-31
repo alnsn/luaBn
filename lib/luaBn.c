@@ -47,6 +47,8 @@
 #define checkbn(L, narg) ((struct BN *)luaL_checkudata(L, (narg), BN_METATABLE))
 #define checkbignum(L, narg) (&checkbn(L, narg)->bignum)
 
+#define negatebignum(bn) BN_set_negative((bn), !BN_is_negative((bn)))
+
 #ifdef LUA_NUMBER_DOUBLE
 
 typedef int64_t  luaBn_Int;
@@ -331,7 +333,7 @@ l_unm(lua_State *L)
 	if (!BN_copy(r, o))
 		return bnerror(L, BN_METATABLE ".__unm");
 
-	BN_set_negative(r, !BN_is_negative(r));
+	negatebignum(r);
 
 	return 1;
 }
@@ -360,6 +362,7 @@ l_add(lua_State *L)
 		status = BN_add(bn[0], bn[1], bn[2]);
 	} else {
 		d = lua_tonumber(L, narg);
+
 		if (d > 0 && d == (BN_ULONG)d) {
 			bn[0] = newbignum(L);
 			if (BN_copy(bn[0], bn[3-narg]))
@@ -386,6 +389,7 @@ l_mul(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] */
 	BN_CTX *ctx;
+	BN_ULONG n;
 	lua_Number d;
 	int narg, status;
 
@@ -407,21 +411,26 @@ l_mul(lua_State *L)
 		status = BN_mul(bn[0], bn[1], bn[2], ctx);
 	} else {
 		d = lua_tonumber(L, narg);
-		if (d > 0 && d == (BN_ULONG)d) {
-			bn[0] = newbignum(L);
-			if (BN_copy(bn[0], bn[3-narg]))
-				status = BN_mul_word(bn[0], (BN_ULONG)d);
-		} else if (-d > 0 && -d == (BN_ULONG)-d) {
-			bn[0] = newbignum(L);
-			if (BN_copy(bn[0], bn[3-narg])) {
-				BN_set_negative(bn[0], !BN_is_negative(bn[0]));
-				status = BN_mul_word(bn[0], (BN_ULONG)-d);
-			}
-		} else {
+
+		if (d > 0 && d == (BN_ULONG)d)
+			n = (BN_ULONG)d;
+		else if (-d > 0 && -d == (BN_ULONG)-d)
+			n = (BN_ULONG)-d;
+		else
+			n = 0;
+
+		if (n == 0) {
 			bn[0] = bn[narg] = luaBn_tobignum(L, narg);
 			lua_pushvalue(L, narg);
 			ctx = get_ctx_val(L);
 			status = BN_mul(bn[0], bn[1], bn[2], ctx);
+		} else {
+			bn[0] = newbignum(L);
+			if (BN_copy(bn[0], bn[3-narg])) {
+				if (-d > 0)
+					negatebignum(bn[0]);
+				status = BN_mul_word(bn[0], n);
+			}
 		}
 	}
 
@@ -459,6 +468,7 @@ l_div(lua_State *L)
 		bn[1] = &getbn(L, 1)->bignum;
 
 		d = lua_tonumber(L, 2);
+
 		if (d > 0 && d == (BN_ULONG)d) {
 			n = (BN_ULONG)d;
 			fast = true;
@@ -471,7 +481,7 @@ l_div(lua_State *L)
 
 		if (fast && BN_copy(bn[0], bn[1])) {
 			if (-d > 0)
-				BN_set_negative(bn[0], !BN_is_negative(bn[0]));
+				negatebignum(bn[0]);
 			rem = BN_div_word(bn[0], n);
 			/*
 			 * Code inspection shows that BN_div_word() doesn't
@@ -522,6 +532,7 @@ l_mod(lua_State *L)
 		bn[1] = &getbn(L, 1)->bignum;
 
 		d = lua_tonumber(L, 2);
+
 		if (d > 0 && d == (BN_ULONG)d) {
 			n = (BN_ULONG)d;
 			fast = true;
