@@ -439,7 +439,7 @@ l_div(lua_State *L)
 	BN_ULONG n, rem;
 	lua_Number d;
 	int status;
-	bool done;
+	bool fast;
 
 	/*
 	 * Unlike many other operations (e.g. BN_add or BN_mul),
@@ -450,7 +450,7 @@ l_div(lua_State *L)
 	bn[0] = newbignum(L);
 
 	status = 0;
-	done = false;
+	fast = false;
 
 	if ((bn[2] = testbignum(L, 2)) != NULL) {
 		bn[1] = luaBn_tobignum(L, 1);
@@ -461,15 +461,15 @@ l_div(lua_State *L)
 		d = lua_tonumber(L, 2);
 		if (d > 0 && d == (BN_ULONG)d) {
 			n = (BN_ULONG)d;
-			done = true;
+			fast = true;
 		} else if (-d > 0 && -d == (BN_ULONG)-d) {
 			n = (BN_ULONG)-d;
-			done = true;
+			fast = true;
 		} else {
 			bn[2] = luaBn_tobignum(L, 2);
 		}
 
-		if (done && BN_copy(bn[0], bn[1])) {
+		if (fast && BN_copy(bn[0], bn[1])) {
 			if (-d > 0)
 				BN_set_negative(bn[0], !BN_is_negative(bn[0]));
 			rem = BN_div_word(bn[0], n);
@@ -483,7 +483,7 @@ l_div(lua_State *L)
 		}
 	}
 
-	if (!done) {
+	if (!fast) {
 		ctx = get_ctx_val(L);
 		status = BN_div(bn[0], NULL, bn[1], bn[2], ctx);
 	}
@@ -502,7 +502,7 @@ l_mod(lua_State *L)
 	BN_ULONG n, rem;
 	lua_Number d;
 	int status;
-	bool done;
+	bool fast;
 
 	/*
 	 * Unlike many other operations (e.g. BN_add or BN_mul),
@@ -513,7 +513,7 @@ l_mod(lua_State *L)
 	bn[0] = newbignum(L);
 
 	status = 0;
-	done = false;
+	fast = false;
 
 	if ((bn[2] = testbignum(L, 2)) != NULL) {
 		bn[1] = luaBn_tobignum(L, 1);
@@ -524,15 +524,15 @@ l_mod(lua_State *L)
 		d = lua_tonumber(L, 2);
 		if (d > 0 && d == (BN_ULONG)d) {
 			n = (BN_ULONG)d;
-			done = true;
+			fast = true;
 		} else if (-d > 0 && -d == (BN_ULONG)-d) {
 			n = (BN_ULONG)-d;
-			done = true;
+			fast = true;
 		} else {
 			bn[2] = luaBn_tobignum(L, 2);
 		}
 
-		if (done) {
+		if (fast) {
 			/*
 			 * Code inspection shows that BN_mod_word() fails
 			 * only when n == 0.
@@ -546,7 +546,7 @@ l_mod(lua_State *L)
 		}
 	}
 
-	if (!done) {
+	if (!fast) {
 		ctx = get_ctx_val(L);
 		status = BN_div(NULL, bn[0], bn[1], bn[2], ctx);
 	}
