@@ -357,7 +357,7 @@ l_unm(lua_State *L)
 }
 
 /* Implementation of l_add and l_sub. */
-static int
+static inline int
 addsub(lua_State *L, int sign, const char *errmsg)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] +/- bn[2] */
