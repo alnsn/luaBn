@@ -584,6 +584,24 @@ l_mod(lua_State *L)
 }
 
 static int
+l_sqr(lua_State *L)
+{
+	BIGNUM *r, *bn;
+	BN_CTX *ctx;
+
+	assert(testbignum(L, 1) != NULL);
+	bn = &getbn(L, 1)->bignum;
+
+	r = newbignum(L);
+	ctx = get_ctx_val(L);
+
+	if (!BN_sqr(r, bn, ctx))
+		return bnerror(L, BN_METATABLE ".sqr");
+
+	return 1;
+}
+
+static int
 gcbn(lua_State *L)
 {
 	struct BN *udata;
@@ -617,6 +635,7 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_methods[] = {
+	{ "sqr",      l_sqr      },
 	{ "tostring", l_tostring },
 	{ NULL, NULL}
 };
