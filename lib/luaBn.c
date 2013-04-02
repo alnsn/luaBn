@@ -584,6 +584,29 @@ l_mod(lua_State *L)
 }
 
 static int
+l_pow(lua_State *L)
+{
+	BIGNUM *bn[3]; /* bn[0] = bn[1] ^ bn[2] */
+	BN_CTX *ctx;
+
+	/*
+	 * BN_exp doesn't specify that the result may be the same variable
+	 * as one of the operands and there is no BN_exp_word.
+	 * These two facts don't leave any room for optimization.
+	 */
+	bn[0] = newbignum(L);
+	bn[1] = luaBn_tobignum(L, 1);
+	bn[2] = luaBn_tobignum(L, 2);
+
+	ctx = get_ctx_val(L);
+
+	if (!BN_exp(bn[0], bn[1], bn[2], ctx))
+		return bnerror(L, BN_METATABLE ".pow");
+
+	return 1;
+}
+
+static int
 l_sqr(lua_State *L)
 {
 	BIGNUM *r, *bn;
@@ -635,6 +658,7 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_methods[] = {
+	{ "pow",      l_pow      },
 	{ "sqr",      l_sqr      },
 	{ "tostring", l_tostring },
 	{ NULL, NULL}
