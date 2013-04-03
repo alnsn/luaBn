@@ -608,6 +608,52 @@ l_gcd(lua_State *L)
 }
 
 static int
+l_modadd(lua_State *L)
+{
+	BIGNUM *mod;
+	BIGNUM *bn[3]; /* bn[0] = bn[1] + bn[2] modulo mod */
+	BN_CTX *ctx;
+
+	bn[0] = newbignum(L);
+
+	assert(testbignum(L, 1) != NULL);
+	bn[1] = &getbn(L, 1)->bignum;
+
+	bn[2] = luaBn_tobignum(L, 2);
+	mod   = luaBn_tobignum(L, 3);
+
+	ctx = get_ctx_val(L);
+
+	if (!BN_mod_add(bn[0], bn[1], bn[2], mod, ctx))
+		return bnerror(L, BN_METATABLE ".modadd");
+
+	return 1;
+}
+
+static int
+l_modsub(lua_State *L)
+{
+	BIGNUM *mod;
+	BIGNUM *bn[3]; /* bn[0] = bn[1] - bn[2] modulo mod */
+	BN_CTX *ctx;
+
+	bn[0] = newbignum(L);
+
+	assert(testbignum(L, 1) != NULL);
+	bn[1] = &getbn(L, 1)->bignum;
+
+	bn[2] = luaBn_tobignum(L, 2);
+	mod   = luaBn_tobignum(L, 3);
+
+	ctx = get_ctx_val(L);
+
+	if (!BN_mod_sub(bn[0], bn[1], bn[2], mod, ctx))
+		return bnerror(L, BN_METATABLE ".modadd");
+
+	return 1;
+}
+
+static int
 l_pow(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] ^ bn[2] */
@@ -683,6 +729,8 @@ gcctx(lua_State *L)
 
 static luaL_reg bn_methods[] = {
 	{ "gcd",      l_gcd      },
+	{ "modadd",   l_modadd   },
+	{ "modsub",   l_modsub   },
 	{ "pow",      l_pow      },
 	{ "sqr",      l_sqr      },
 	{ "tostring", l_tostring },
