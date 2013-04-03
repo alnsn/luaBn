@@ -648,7 +648,7 @@ l_modsub(lua_State *L)
 	ctx = get_ctx_val(L);
 
 	if (!BN_mod_sub(bn[0], bn[1], bn[2], mod, ctx))
-		return bnerror(L, BN_METATABLE ".modadd");
+		return bnerror(L, BN_METATABLE ".modsub");
 
 	return 1;
 }
