@@ -681,6 +681,28 @@ l_modmul(lua_State *L)
 }
 
 static int
+l_modsqr(lua_State *L)
+{
+	BIGNUM *mod;
+	BIGNUM *bn[2]; /* bn[0] = sqr(bn[1]) modulo mod */
+	BN_CTX *ctx;
+
+	bn[0] = newbignum(L);
+
+	assert(testbignum(L, 1) != NULL);
+	bn[1] = &getbn(L, 1)->bignum;
+
+	mod = luaBn_tobignum(L, 2);
+
+	ctx = get_ctx_val(L);
+
+	if (!BN_mod_sqr(bn[0], bn[1], mod, ctx))
+		return bnerror(L, BN_METATABLE ".modsqr");
+
+	return 1;
+}
+
+static int
 l_pow(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] ^ bn[2] */
@@ -759,6 +781,7 @@ static luaL_reg bn_methods[] = {
 	{ "modadd",   l_modadd   },
 	{ "modsub",   l_modsub   },
 	{ "modmul",   l_modmul   },
+	{ "modsqr",   l_modsqr   },
 	{ "pow",      l_pow      },
 	{ "sqr",      l_sqr      },
 	{ "tostring", l_tostring },
