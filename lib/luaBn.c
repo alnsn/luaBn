@@ -340,6 +340,22 @@ l_tostring(lua_State *L)
 }
 
 static int
+l_eq(lua_State *L)
+{
+	BIGNUM *a, *b;
+
+	assert(testbignum(L, 1) != NULL);
+	assert(testbignum(L, 2) != NULL);
+
+	a = &getbn(L, 1)->bignum;
+	b = &getbn(L, 2)->bignum;
+
+	lua_pushboolean(L, BN_cmp(a, b) == 0);
+
+	return 1;
+}
+
+static int
 l_unm(lua_State *L)
 {
 	BIGNUM *o, *r;
@@ -835,6 +851,7 @@ static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
 	{ "__add",      l_add      },
 	{ "__div",      l_div      },
+	{ "__eq",       l_eq       },
 	{ "__mod",      l_mod      },
 	{ "__mul",      l_mul      },
 	{ "__sub",      l_sub      },
