@@ -313,7 +313,7 @@ luaBn_tobignum(lua_State *L, int narg)
 }
 
 static int
-l_number(lua_State *L)
+f_number(lua_State *L)
 {
 	luaBn_tobignum(L, 1);
 	lua_pushvalue(L, 1);
@@ -321,7 +321,7 @@ l_number(lua_State *L)
 }
 
 static int
-l_tostring(lua_State *L)
+m_tostring(lua_State *L)
 {
 	struct BN *bn;
 
@@ -340,7 +340,7 @@ l_tostring(lua_State *L)
 }
 
 static int
-l_eq(lua_State *L)
+m_eq(lua_State *L)
 {
 	BIGNUM *a, *b;
 
@@ -356,7 +356,7 @@ l_eq(lua_State *L)
 }
 
 static int
-l_unm(lua_State *L)
+m_unm(lua_State *L)
 {
 	BIGNUM *o, *r;
 
@@ -372,7 +372,7 @@ l_unm(lua_State *L)
 	return 1;
 }
 
-/* Implementation of l_add and l_sub. */
+/* Implementation of m_add and m_sub. */
 static inline int
 addsub(lua_State *L, int sign, const char *errmsg)
 {
@@ -426,21 +426,21 @@ addsub(lua_State *L, int sign, const char *errmsg)
 }
 
 static int
-l_add(lua_State *L)
+m_add(lua_State *L)
 {
 
 	return addsub(L, 1, BN_METATABLE ".__add");
 }
 
 static int
-l_sub(lua_State *L)
+m_sub(lua_State *L)
 {
 
 	return addsub(L, -1, BN_METATABLE ".__sub");
 }
 
 static int
-l_mul(lua_State *L)
+m_mul(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] */
 	BN_CTX *ctx;
@@ -490,7 +490,7 @@ l_mul(lua_State *L)
 }
 
 static int
-l_div(lua_State *L)
+m_div(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] / bn[2] */
 	BN_CTX *ctx;
@@ -545,7 +545,7 @@ l_div(lua_State *L)
 }
 
 static int
-l_mod(lua_State *L)
+m_mod(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] % bn[2] */
 	BN_CTX *ctx;
@@ -600,7 +600,7 @@ l_mod(lua_State *L)
 }
 
 static int
-l_gcd(lua_State *L)
+f_gcd(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = gcd(bn[1], bn[2]) */
 	BN_CTX *ctx;
@@ -624,7 +624,7 @@ l_gcd(lua_State *L)
 }
 
 static int
-l_modadd(lua_State *L)
+f_modadd(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[3]; /* bn[0] = bn[1] + bn[2] modulo mod */
@@ -647,7 +647,7 @@ l_modadd(lua_State *L)
 }
 
 static int
-l_modsub(lua_State *L)
+f_modsub(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[3]; /* bn[0] = bn[1] - bn[2] modulo mod */
@@ -670,7 +670,7 @@ l_modsub(lua_State *L)
 }
 
 static int
-l_modmul(lua_State *L)
+f_modmul(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] modulo mod */
@@ -697,7 +697,7 @@ l_modmul(lua_State *L)
 }
 
 static int
-l_modpow(lua_State *L)
+f_modpow(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[3]; /* bn[0] = bn[1] ^ bn[2] modulo mod */
@@ -720,7 +720,7 @@ l_modpow(lua_State *L)
 }
 
 static int
-l_modsqr(lua_State *L)
+f_modsqr(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[2]; /* bn[0] = sqr(bn[1]) modulo mod */
@@ -742,7 +742,7 @@ l_modsqr(lua_State *L)
 }
 
 static int
-l_pow(lua_State *L)
+m_pow(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] ^ bn[2] */
 	BN_CTX *ctx;
@@ -765,7 +765,7 @@ l_pow(lua_State *L)
 }
 
 static int
-l_sqr(lua_State *L)
+f_sqr(lua_State *L)
 {
 	BIGNUM *r, *bn;
 	BN_CTX *ctx;
@@ -783,7 +783,7 @@ l_sqr(lua_State *L)
 }
 
 static int
-l_swap(lua_State *L)
+f_swap(lua_State *L)
 {
 	BIGNUM *a, *b;
 
@@ -834,34 +834,34 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_methods[] = {
-	{ "gcd",      l_gcd      },
-	{ "modadd",   l_modadd   },
-	{ "modsub",   l_modsub   },
-	{ "modmul",   l_modmul   },
-	{ "modpow",   l_modpow   },
-	{ "modsqr",   l_modsqr   },
-	{ "sqr",      l_sqr      },
-	{ "swap",     l_swap     },
-	{ "tostring", l_tostring },
+	{ "gcd",      f_gcd      },
+	{ "modadd",   f_modadd   },
+	{ "modsub",   f_modsub   },
+	{ "modmul",   f_modmul   },
+	{ "modpow",   f_modpow   },
+	{ "modsqr",   f_modsqr   },
+	{ "sqr",      f_sqr      },
+	{ "swap",     f_swap     },
+	{ "tostring", m_tostring },
 	{ NULL, NULL}
 };
 
 static luaL_reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
-	{ "__add",      l_add      },
-	{ "__div",      l_div      },
-	{ "__eq",       l_eq       },
-	{ "__mod",      l_mod      },
-	{ "__mul",      l_mul      },
-	{ "__pow",      l_pow      },
-	{ "__sub",      l_sub      },
-	{ "__unm",      l_unm      },
-	{ "__tostring", l_tostring },
+	{ "__add",      m_add      },
+	{ "__div",      m_div      },
+	{ "__eq",       m_eq       },
+	{ "__mod",      m_mod      },
+	{ "__mul",      m_mul      },
+	{ "__pow",      m_pow      },
+	{ "__sub",      m_sub      },
+	{ "__unm",      m_unm      },
+	{ "__tostring", m_tostring },
 	{ NULL, NULL}
 };
 
 static luaL_reg bn_functions[] = {
-	{ "number", l_number },
+	{ "number", f_number },
 	{ NULL, NULL}
 };
 
