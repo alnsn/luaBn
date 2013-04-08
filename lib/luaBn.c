@@ -640,6 +640,19 @@ f_gcd(lua_State *L)
 }
 
 static int
+f_iseven(lua_State *L)
+{
+	BIGNUM *bn;
+
+	assert(testbignum(L, 1) != NULL);
+	bn = &getbn(L, 1)->bignum;
+
+	lua_pushboolean(L, BN_is_odd(bn) == 0);
+
+	return 1;
+}
+
+static int
 f_isodd(lua_State *L)
 {
 	BIGNUM *bn;
@@ -886,6 +899,7 @@ gcctx(lua_State *L)
 
 static luaL_reg bn_methods[] = {
 	{ "gcd",      f_gcd      },
+	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
 	{ "modadd",   f_modadd   },
 	{ "modsub",   f_modsub   },
