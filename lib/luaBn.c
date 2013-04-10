@@ -616,6 +616,36 @@ m_mod(lua_State *L)
 }
 
 static int
+f_cmp(lua_State *L)
+{
+	BIGNUM *a, *b;
+
+	assert(testbignum(L, 1) != NULL);
+
+	a = &getbn(L, 1)->bignum;
+	b = luaBn_tobignum(L, 2);
+
+	lua_pushinteger(L, BN_cmp(a, b));
+
+	return 1;
+}
+
+static int
+f_ucmp(lua_State *L)
+{
+	BIGNUM *a, *b;
+
+	assert(testbignum(L, 1) != NULL);
+
+	a = &getbn(L, 1)->bignum;
+	b = luaBn_tobignum(L, 2);
+
+	lua_pushinteger(L, BN_ucmp(a, b));
+
+	return 1;
+}
+
+static int
 f_gcd(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = gcd(bn[1], bn[2]) */
@@ -898,6 +928,8 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_methods[] = {
+	{ "cmp",      f_cmp      },
+	{ "ucmp",     f_ucmp     },
 	{ "gcd",      f_gcd      },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
