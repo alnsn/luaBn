@@ -400,7 +400,7 @@ mt_unm(lua_State *L)
 
 /* Implementation of mt_add and mt_sub. */
 static inline int
-addsub(lua_State *L, int sign, const char *errmsg)
+h_addsub(lua_State *L, int sign, const char *errmsg)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] +/- bn[2] */
 	BN_ULONG n;
@@ -455,14 +455,14 @@ static int
 mt_add(lua_State *L)
 {
 
-	return addsub(L, 1, BN_METATABLE ".__add");
+	return h_addsub(L, 1, BN_METATABLE ".__add");
 }
 
 static int
 mt_sub(lua_State *L)
 {
 
-	return addsub(L, -1, BN_METATABLE ".__sub");
+	return h_addsub(L, -1, BN_METATABLE ".__sub");
 }
 
 static int
