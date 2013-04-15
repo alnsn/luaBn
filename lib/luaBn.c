@@ -30,10 +30,10 @@
 /*
  * Function names convention used in this file:
  *
- * mt_add - metamethod __add
- * m_eq   - member function sqr of BN_METATABLE userdata
- * f_eq   - module function bn.eq
- * h_eq   - helper function for f_eq and m_eq
+ * mt_add() - metamethod __add()
+ * m_eq()   - member function b:eq() where b is BN_METATABLE userdata
+ * f_eq()   - module function bn.eq()
+ * h_eq()   - helper function for f_eq() and m_eq()
  */
 
 #include "luaBn.h"
