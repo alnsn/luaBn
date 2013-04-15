@@ -400,7 +400,7 @@ mt_unm(lua_State *L)
 
 /* Implementation of mt_add and mt_sub. */
 static inline int
-h_addsub(lua_State *L, int sign, const char *errmsg)
+h_addsub(lua_State *L, int sign, const char *errmsg, bool ismt)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] +/- bn[2] */
 	BN_ULONG n;
@@ -409,8 +409,12 @@ h_addsub(lua_State *L, int sign, const char *errmsg)
 
 	if ((bn[2] = testbignum(L, 2)) == NULL) {
 		narg = 2;
-		assert(testbignum(L, 1) != NULL);
-		bn[1] = &getbn(L, 1)->bignum;
+		if (ismt) {
+			assert(testbignum(L, 1) != NULL);
+			bn[1] = &getbn(L, 1)->bignum;
+		} else {
+			bn[1] = luaBn_tobignum(L, 1);
+		}
 	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
 		narg = 1;
 	} else {
@@ -455,14 +459,28 @@ static int
 mt_add(lua_State *L)
 {
 
-	return h_addsub(L, 1, BN_METATABLE ".__add");
+	return h_addsub(L, 1, BN_METATABLE ".__add", true);
+}
+
+static int
+f_add(lua_State *L)
+{
+
+	return h_addsub(L, 1, "bn.add", false);
 }
 
 static int
 mt_sub(lua_State *L)
 {
 
-	return h_addsub(L, -1, BN_METATABLE ".__sub");
+	return h_addsub(L, -1, BN_METATABLE ".__sub", true);
+}
+
+static int
+f_sub(lua_State *L)
+{
+
+	return h_addsub(L, -1, "bn.sub", false);
 }
 
 static int
@@ -1037,6 +1055,8 @@ static luaL_reg bn_metafunctions[] = {
 
 static luaL_reg bn_functions[] = {
 	{ "number", f_number },
+	{ "add",    f_add    },
+	{ "sub",    f_sub    },
 	{ "eq",     f_eq     },
 	{ NULL, NULL}
 };
