@@ -484,7 +484,7 @@ f_sub(lua_State *L)
 }
 
 static int
-mt_mul(lua_State *L)
+h_mul(lua_State *L, bool ismt)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] */
 	BN_CTX *ctx;
@@ -494,8 +494,12 @@ mt_mul(lua_State *L)
 
 	if ((bn[1] = testbignum(L, 1)) == NULL) {
 		narg = 1;
-		assert(testbignum(L, 2) != NULL);
-		bn[2] = &getbn(L, 2)->bignum;
+		if (ismt) {
+			assert(testbignum(L, 2) != NULL);
+			bn[2] = &getbn(L, 2)->bignum;
+		} else {
+			bn[2] = luaBn_tobignum(L, 2);
+		}
 	} else if ((bn[2] = testbignum(L, 2)) == NULL) {
 		narg = 2;
 	} else {
@@ -531,6 +535,20 @@ mt_mul(lua_State *L)
 		return bnerror(L, BN_METATABLE ".__mul");
 
 	return 1;
+}
+
+static int
+mt_mul(lua_State *L)
+{
+
+	return h_mul(L, true);
+}
+
+static int
+f_mul(lua_State *L)
+{
+
+	return h_mul(L, false);
 }
 
 static int
@@ -1054,10 +1072,11 @@ static luaL_reg bn_metafunctions[] = {
 };
 
 static luaL_reg bn_functions[] = {
-	{ "number", f_number },
 	{ "add",    f_add    },
+	{ "mul",    f_mul    },
 	{ "sub",    f_sub    },
 	{ "eq",     f_eq     },
+	{ "number", f_number },
 	{ NULL, NULL}
 };
 
