@@ -30,10 +30,13 @@
 /*
  * Function names convention used in this file:
  *
- * mt_add() - metamethod __add()
- * m_eq()   - member function b:eq() where b is BN_METATABLE userdata
- * f_eq()   - module function bn.eq()
- * h_eq()   - helper function for f_eq() and m_eq()
+ * mt_mul() - metamethod __mul()
+ * m_mul()  - member function b:mul() where b is BN_METATABLE userdata
+ * f_mul()  - module function bn.mul()
+ * h_mul()  - helper function for f_mul(), m_mul() and mt_mul()
+ *
+ * Helpers functions are designed to avoid one testbignum() call
+ * and they are safe only for metamethods.
  */
 
 #include "luaBn.h"
@@ -552,7 +555,7 @@ f_mul(lua_State *L)
 }
 
 static int
-mt_div(lua_State *L)
+h_div(lua_State *L, bool ismt)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] / bn[2] */
 	BN_CTX *ctx;
@@ -574,8 +577,12 @@ mt_div(lua_State *L)
 	if ((bn[2] = testbignum(L, 2)) != NULL) {
 		bn[1] = luaBn_tobignum(L, 1);
 	} else {
-		assert(testbignum(L, 1) != NULL);
-		bn[1] = &getbn(L, 1)->bignum;
+		if (ismt) {
+			assert(testbignum(L, 1) != NULL);
+			bn[1] = &getbn(L, 1)->bignum;
+		} else {
+			bn[1] = luaBn_tobignum(L, 1);
+		}
 
 		d = lua_tonumber(L, 2);
 		n = absnumber(d);
@@ -604,6 +611,20 @@ mt_div(lua_State *L)
 		return bnerror(L, BN_METATABLE ".__div");
 
 	return 1;
+}
+
+static int
+mt_div(lua_State *L)
+{
+
+	return h_div(L, true);
+}
+
+static int
+f_div(lua_State *L)
+{
+
+	return h_div(L, false);
 }
 
 static int
@@ -742,7 +763,7 @@ m_isodd(lua_State *L)
 }
 
 static int
-h_eq(lua_State *L, BIGNUM *a)
+f_eq(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[1] == bn[2] */
 	lua_Number d;
@@ -751,17 +772,14 @@ h_eq(lua_State *L, BIGNUM *a)
 	int narg;
 
 	narg = 0;
-	bn[1] = a;
 
 	if ((bn[2] = testbignum(L, 2)) == NULL)
 		narg = 2;
 
-	if (bn[1] == NULL) {
-		if ((bn[1] = testbignum(L, 1)) == NULL) {
-			narg = 1;
-			if (bn[2] == NULL)
-				bn[2] = luaBn_tobignum(L, 2);
-		}
+	if ((bn[1] = testbignum(L, 1)) == NULL) {
+		narg = 1;
+		if (bn[2] == NULL)
+			bn[2] = luaBn_tobignum(L, 2);
 	}
 
 	if (narg != 0) {
@@ -788,21 +806,6 @@ h_eq(lua_State *L, BIGNUM *a)
 	lua_pushboolean(L, res);
 
 	return 1;
-}
-
-static int
-m_eq(lua_State *L)
-{
-
-	assert(testbignum(L, 1) != NULL);
-	return h_eq(L, &getbn(L, 1)->bignum);
-}
-
-static int
-f_eq(lua_State *L)
-{
-
-	return h_eq(L, NULL);
 }
 
 static int
@@ -1038,12 +1041,16 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_methods[] = {
+	{ "add",      f_add      },
+	{ "div",      f_div      },
+	{ "mul",      f_mul      },
+	{ "sub",      f_sub      },
 	{ "cmp",      m_cmp      },
 	{ "ucmp",     m_ucmp     },
 	{ "gcd",      m_gcd      },
 	{ "iseven",   m_iseven   },
 	{ "isodd",    m_isodd    },
-	{ "eq",       m_eq       },
+	{ "eq",       f_eq       },
 	{ "modadd",   m_modadd   },
 	{ "modsub",   m_modsub   },
 	{ "modmul",   m_modmul   },
@@ -1073,6 +1080,7 @@ static luaL_reg bn_metafunctions[] = {
 
 static luaL_reg bn_functions[] = {
 	{ "add",    f_add    },
+	{ "div",    f_div    },
 	{ "mul",    f_mul    },
 	{ "sub",    f_sub    },
 	{ "eq",     f_eq     },
