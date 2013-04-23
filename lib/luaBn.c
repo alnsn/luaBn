@@ -487,7 +487,7 @@ f_sub(lua_State *L)
 }
 
 static int
-h_mul(lua_State *L, bool ismt)
+h_mul(lua_State *L, const char *errmsg, bool ismt)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] */
 	BN_CTX *ctx;
@@ -535,7 +535,7 @@ h_mul(lua_State *L, bool ismt)
 	}
 
 	if (status == 0)
-		return bnerror(L, BN_METATABLE ".__mul");
+		return bnerror(L, errmsg);
 
 	return 1;
 }
@@ -544,18 +544,18 @@ static int
 mt_mul(lua_State *L)
 {
 
-	return h_mul(L, true);
+	return h_mul(L, BN_METATABLE ".__mul", true);
 }
 
 static int
 f_mul(lua_State *L)
 {
 
-	return h_mul(L, false);
+	return h_mul(L, "bn.mul", false);
 }
 
 static int
-h_div(lua_State *L, bool ismt)
+h_div(lua_State *L, const char *errmsg, bool ismt)
 {
 	BIGNUM *bn[3]; /* bn[0] = bn[1] / bn[2] */
 	BN_CTX *ctx;
@@ -608,7 +608,7 @@ h_div(lua_State *L, bool ismt)
 	}
 
 	if (status == 0)
-		return bnerror(L, BN_METATABLE ".__div");
+		return bnerror(L, errmsg);
 
 	return 1;
 }
@@ -617,14 +617,14 @@ static int
 mt_div(lua_State *L)
 {
 
-	return h_div(L, true);
+	return h_div(L, BN_METATABLE ".__div", true);
 }
 
 static int
 f_div(lua_State *L)
 {
 
-	return h_div(L, false);
+	return h_div(L, "bn.div", false);
 }
 
 static int
@@ -683,13 +683,11 @@ mt_mod(lua_State *L)
 }
 
 static int
-m_cmp(lua_State *L)
+f_cmp(lua_State *L)
 {
 	BIGNUM *a, *b;
 
-	assert(testbignum(L, 1) != NULL);
-
-	a = &getbn(L, 1)->bignum;
+	a = luaBn_tobignum(L, 1);
 	b = luaBn_tobignum(L, 2);
 
 	lua_pushinteger(L, BN_cmp(a, b));
@@ -698,13 +696,11 @@ m_cmp(lua_State *L)
 }
 
 static int
-m_ucmp(lua_State *L)
+f_ucmp(lua_State *L)
 {
 	BIGNUM *a, *b;
 
-	assert(testbignum(L, 1) != NULL);
-
-	a = &getbn(L, 1)->bignum;
+	a = luaBn_tobignum(L, 1);
 	b = luaBn_tobignum(L, 2);
 
 	lua_pushinteger(L, BN_ucmp(a, b));
@@ -841,7 +837,7 @@ f_modsub(lua_State *L)
 	ctx = get_ctx_val(L);
 
 	if (!BN_mod_sub(bn[0], bn[1], bn[2], mod, ctx))
-		return bnerror(L, BN_METATABLE ".modsub");
+		return bnerror(L, "bn.modsub");
 
 	return 1;
 }
@@ -875,7 +871,7 @@ f_modmul(lua_State *L)
 	ctx = get_ctx_val(L);
 
 	if (!BN_mod_mul(bn[0], bn[1], bn[2], mod, ctx))
-		return bnerror(L, BN_METATABLE ".modmul");
+		return bnerror(L, "bn.modmul");
 
 	return 1;
 }
@@ -1047,8 +1043,8 @@ static luaL_reg bn_methods[] = {
 	{ "div",      f_div      },
 	{ "mul",      f_mul      },
 	{ "sub",      f_sub      },
-	{ "cmp",      m_cmp      },
-	{ "ucmp",     m_ucmp     },
+	{ "cmp",      f_cmp      },
+	{ "ucmp",     f_ucmp     },
 	{ "gcd",      m_gcd      },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
@@ -1087,6 +1083,8 @@ static luaL_reg bn_functions[] = {
 	{ "sub",    f_sub    },
 	{ "eq",     f_eq     },
 	{ "sqr",    f_sqr    },
+	{ "cmp",    f_cmp    },
+	{ "ucmp",   f_ucmp   },
 	{ "modadd", f_modadd },
 	{ "modsub", f_modsub },
 	{ "modmul", f_modmul },
