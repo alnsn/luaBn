@@ -401,6 +401,34 @@ mt_unm(lua_State *L)
 	return 1;
 }
 
+/*
+ * Use this function for operations whose return values
+ * can be the same object as one of the arguments.
+ */
+static int
+bn3(lua_State *L, BIGNUM *bn[/* 3 */])
+{
+	int narg;
+
+	if ((bn[2] = testbignum(L, 2)) == NULL) {
+		narg = 2;
+		bn[1] = luaBn_tobignum(L, 1);
+	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
+		narg = 1;
+	} else {
+		narg = 0;
+	}
+
+	if (narg == 0) {
+		bn[0] = newbignum(L);
+	} else {
+		bn[0] = bn[narg] = luaBn_tobignum(L, narg);
+		lua_pushvalue(L, narg);
+	}
+
+	return narg;
+}
+
 /* Implementation of mt_add and mt_sub. */
 static inline int
 h_addsub(lua_State *L, int sign, const char *errmsg, bool ismt)
@@ -848,23 +876,8 @@ f_modmul(lua_State *L)
 	BIGNUM *mod;
 	BIGNUM *bn[3]; /* bn[0] = bn[1] * bn[2] modulo mod */
 	BN_CTX *ctx;
-	int narg;
 
-	if ((bn[2] = testbignum(L, 2)) == NULL) {
-		narg = 2;
-		bn[1] = luaBn_tobignum(L, 1);
-	} else if ((bn[1] = testbignum(L, 1)) == NULL) {
-		narg = 1;
-	} else {
-		narg = 0;
-	}
-
-	if (narg == 0) {
-		bn[0] = newbignum(L);
-	} else {
-		bn[0] = bn[narg] = luaBn_tobignum(L, narg);
-		lua_pushvalue(L, narg);
-	}
+	bn3(L, bn);
 
 	mod = luaBn_tobignum(L, 3);
 
