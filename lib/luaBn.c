@@ -402,7 +402,9 @@ mt_unm(lua_State *L)
 }
 
 /*
- * Use this function for an operation OP:
+ * Convert arguments 1 and to to BIGNUM objects and
+ * push one BIGNUM object.
+ * Use this function for a binary operation OP:
  * bn[0] = bn[1] OP bn[2]
  * when bn[0] can be the same object as bn[1] or bn[2].
  */
