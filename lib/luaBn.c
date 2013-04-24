@@ -738,25 +738,17 @@ f_ucmp(lua_State *L)
 }
 
 static int
-m_gcd(lua_State *L)
+f_gcd(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[0] = gcd(bn[1], bn[2]) */
 	BN_CTX *ctx;
 
-	assert(testbignum(L, 1) != NULL);
-	bn[1] = &getbn(L, 1)->bignum;
-
-	if ((bn[2] = testbignum(L, 2)) != NULL) {
-		bn[0] = newbignum(L);
-	} else {
-		bn[0] = bn[2] = luaBn_tobignum(L, 2);
-		lua_pushvalue(L, 2);
-	}
+	bn3(L, bn);
 
 	ctx = get_ctx_val(L);
 
 	if (!BN_gcd(bn[0], bn[1], bn[2], ctx))
-		return bnerror(L, BN_METATABLE ".gcd");
+		return bnerror(L, "bn.gcd");
 
 	return 1;
 }
@@ -1050,7 +1042,7 @@ static luaL_reg bn_methods[] = {
 	{ "sub",      f_sub      },
 	{ "cmp",      f_cmp      },
 	{ "ucmp",     f_ucmp     },
-	{ "gcd",      m_gcd      },
+	{ "gcd",      f_gcd      },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
 	{ "eq",       f_eq       },
@@ -1090,6 +1082,7 @@ static luaL_reg bn_functions[] = {
 	{ "sqr",    f_sqr    },
 	{ "cmp",    f_cmp    },
 	{ "ucmp",   f_ucmp   },
+	{ "gcd",    f_gcd    },
 	{ "modadd", f_modadd },
 	{ "modsub", f_modsub },
 	{ "modmul", f_modmul },
