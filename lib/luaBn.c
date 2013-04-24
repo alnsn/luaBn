@@ -402,8 +402,9 @@ mt_unm(lua_State *L)
 }
 
 /*
- * Use this function for operations whose return values
- * can be the same object as one of the arguments.
+ * Use this function for an operation OP:
+ * bn[0] = bn[1] OP bn[2]
+ * when bn[0] can be the same object as bn[1] or bn[2].
  */
 static int
 bn3(lua_State *L, BIGNUM *bn[/* 3 */])
