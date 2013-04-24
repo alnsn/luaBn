@@ -1035,6 +1035,21 @@ gcctx(lua_State *L)
 	return 0;
 }
 
+static luaL_reg bn_metafunctions[] = {
+	{ "__gc",       gcbn        },
+	{ "__add",      mt_add      },
+	{ "__div",      mt_div      },
+	{ "__eq",       mt_eq       },
+	{ "__lt",       mt_lt       },
+	{ "__mod",      mt_mod      },
+	{ "__mul",      mt_mul      },
+	{ "__pow",      mt_pow      },
+	{ "__sub",      mt_sub      },
+	{ "__unm",      mt_unm      },
+	{ "__tostring", m_tostring },
+	{ NULL, NULL}
+};
+
 static luaL_reg bn_methods[] = {
 	{ "add",      f_add      },
 	{ "div",      f_div      },
@@ -1055,21 +1070,6 @@ static luaL_reg bn_methods[] = {
 	{ "sqr",      f_sqr      },
 	{ "swap",     m_swap     },
 	{ "tostring", m_tostring },
-	{ NULL, NULL}
-};
-
-static luaL_reg bn_metafunctions[] = {
-	{ "__gc",       gcbn        },
-	{ "__add",      mt_add      },
-	{ "__div",      mt_div      },
-	{ "__eq",       mt_eq       },
-	{ "__lt",       mt_lt       },
-	{ "__mod",      mt_mod      },
-	{ "__mul",      mt_mul      },
-	{ "__pow",      mt_pow      },
-	{ "__sub",      mt_sub      },
-	{ "__unm",      mt_unm      },
-	{ "__tostring", m_tostring },
 	{ NULL, NULL}
 };
 
