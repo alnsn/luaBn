@@ -930,23 +930,20 @@ f_modsqr(lua_State *L)
 }
 
 static int
-m_nnmod(lua_State *L)
+f_nnmod(lua_State *L)
 {
 	BIGNUM *mod;
 	BIGNUM *bn[2]; /* bn[0] = nnmod(bn[1], mod) */
 	BN_CTX *ctx;
 
 	bn[0] = newbignum(L);
-
-	assert(testbignum(L, 1) != NULL);
-	bn[1] = &getbn(L, 1)->bignum;
-
-	mod = luaBn_tobignum(L, 2);
+	bn[1] = luaBn_tobignum(L, 1);
+	mod   = luaBn_tobignum(L, 2);
 
 	ctx = get_ctx_val(L);
 
 	if (!BN_nnmod(bn[0], bn[1], mod, ctx))
-		return bnerror(L, BN_METATABLE ".nnmod");
+		return bnerror(L, "bn.nnmod");
 
 	return 1;
 }
@@ -1062,7 +1059,7 @@ static luaL_reg bn_methods[] = {
 	{ "modmul",   f_modmul   },
 	{ "modpow",   f_modpow   },
 	{ "modsqr",   f_modsqr   },
-	{ "nnmod",    m_nnmod    },
+	{ "nnmod",    f_nnmod    },
 	{ "sqr",      f_sqr      },
 	{ "swap",     m_swap     },
 	{ "tostring", m_tostring },
@@ -1098,6 +1095,7 @@ static luaL_reg bn_functions[] = {
 	{ "modmul", f_modmul },
 	{ "modpow", f_modpow },
 	{ "modsqr", f_modsqr },
+	{ "nnmod",  f_nnmod  },
 	{ "isodd",  f_iseven },
 	{ "isodd",  f_isodd  },
 	{ "number", f_number },
