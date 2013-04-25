@@ -334,6 +334,43 @@ f_number(lua_State *L)
 }
 
 static int
+f_tobin(lua_State *L)
+{
+	luaL_Buffer buf;
+	struct BN *bn;
+	unsigned char *res;
+	int nbytes;
+
+	luaL_buffinit(L, &buf);
+
+	bn = checkbn(L, 1);
+	nbytes = BN_num_bytes(&bn->bignum);
+
+	if (nbytes <= LUAL_BUFFERSIZE) {
+		res = (unsigned char *)luaL_prepbuffer(&buf);
+		nbytes = BN_bn2bin(&bn->bignum, res);
+		luaL_addsize(&buf, nbytes);
+	} else {
+		if (bn->str != NULL)
+			OPENSSL_free(bn->str);
+		bn->str = OPENSSL_malloc(nbytes);
+		if (bn->str == NULL)
+			return bnerror(L, "bn.tobin: no memory");
+		res = (unsigned char *)bn->str;
+		nbytes = BN_bn2bin(&bn->bignum, res);
+		luaL_addlstring(&buf, bn->str, nbytes);
+	}
+
+	luaL_pushresult(&buf);
+
+	if (bn->str != NULL)
+		OPENSSL_free(bn->str);
+	bn->str = NULL;
+
+	return 1;
+}
+
+static int
 m_tostring(lua_State *L)
 {
 	struct BN *bn;
@@ -1084,6 +1121,7 @@ static luaL_reg bn_methods[] = {
 	{ "nnmod",    f_nnmod    },
 	{ "sqr",      f_sqr      },
 	{ "swap",     f_swap     },
+	{ "tobin",    f_tobin    },
 	{ "tostring", m_tostring },
 	{ NULL, NULL}
 };
