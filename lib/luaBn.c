@@ -1038,16 +1038,16 @@ gcctx(lua_State *L)
 }
 
 static luaL_reg bn_metafunctions[] = {
-	{ "__gc",       gcbn        },
-	{ "__add",      mt_add      },
-	{ "__div",      mt_div      },
-	{ "__eq",       mt_eq       },
-	{ "__lt",       mt_lt       },
-	{ "__mod",      mt_mod      },
-	{ "__mul",      mt_mul      },
-	{ "__pow",      mt_pow      },
-	{ "__sub",      mt_sub      },
-	{ "__unm",      mt_unm      },
+	{ "__gc",       gcbn       },
+	{ "__add",      mt_add     },
+	{ "__div",      mt_div     },
+	{ "__eq",       mt_eq      },
+	{ "__lt",       mt_lt      },
+	{ "__mod",      mt_mod     },
+	{ "__mul",      mt_mul     },
+	{ "__pow",      mt_pow     },
+	{ "__sub",      mt_sub     },
+	{ "__unm",      mt_unm     },
 	{ "__tostring", m_tostring },
 	{ NULL, NULL}
 };
