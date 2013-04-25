@@ -987,14 +987,15 @@ f_sqr(lua_State *L)
 }
 
 static int
-m_swap(lua_State *L)
+f_swap(lua_State *L)
 {
 	BIGNUM *a, *b;
+	int i;
 
-	if (testbignum(L, 2) == NULL)
-		return luaL_typerror(L, 2, BN_METATABLE);
-
-	assert(testbignum(L, 1) != NULL);
+	for (i = 1; i <= 2; i++) {
+		if (testbignum(L, i) == NULL)
+			return luaL_typerror(L, i, BN_METATABLE);
+	}
 
 	a = &getbn(L, 1)->bignum;
 	b = &getbn(L, 2)->bignum;
@@ -1070,7 +1071,7 @@ static luaL_reg bn_methods[] = {
 	{ "modsqr",   f_modsqr   },
 	{ "nnmod",    f_nnmod    },
 	{ "sqr",      f_sqr      },
-	{ "swap",     m_swap     },
+	{ "swap",     f_swap     },
 	{ "tostring", m_tostring },
 	{ NULL, NULL}
 };
@@ -1093,6 +1094,7 @@ static luaL_reg bn_functions[] = {
 	{ "modsqr",   f_modsqr   },
 	{ "nnmod",    f_nnmod    },
 	{ "sqr",      f_sqr      },
+	{ "swap",     f_swap     },
 	{ "number",   f_number   },
 	{ NULL, NULL}
 };
