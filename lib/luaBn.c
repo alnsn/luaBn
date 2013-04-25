@@ -756,6 +756,17 @@ f_gcd(lua_State *L)
 }
 
 static int
+f_isneg(lua_State *L)
+{
+	BIGNUM *bn;
+
+	bn = luaBn_tobignum(L, 1);
+	lua_pushboolean(L, BN_is_negative(bn) != 0);
+
+	return 1;
+}
+
+static int
 f_iseven(lua_State *L)
 {
 	BIGNUM *bn;
@@ -1061,6 +1072,7 @@ static luaL_reg bn_methods[] = {
 	{ "cmp",      f_cmp      },
 	{ "ucmp",     f_ucmp     },
 	{ "gcd",      f_gcd      },
+	{ "isneg",    f_isneg    },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
 	{ "eq",       f_eq       },
@@ -1084,6 +1096,7 @@ static luaL_reg bn_functions[] = {
 	{ "cmp",      f_cmp      },
 	{ "ucmp",     f_ucmp     },
 	{ "gcd",      f_gcd      },
+	{ "isneg",    f_isneg    },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
 	{ "eq",       f_eq       },
