@@ -1084,7 +1084,7 @@ static luaL_reg bn_functions[] = {
 	{ "cmp",      f_cmp      },
 	{ "ucmp",     f_ucmp     },
 	{ "gcd",      f_gcd      },
-	{ "isodd",    f_iseven   },
+	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
 	{ "eq",       f_eq       },
 	{ "modadd",   f_modadd   },
