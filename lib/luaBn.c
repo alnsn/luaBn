@@ -826,6 +826,28 @@ f_isodd(lua_State *L)
 }
 
 static int
+f_isone(lua_State *L)
+{
+	BIGNUM *bn;
+
+	bn = luaBn_tobignum(L, 1);
+	lua_pushboolean(L, BN_is_one(bn));
+
+	return 1;
+}
+
+static int
+f_iszero(lua_State *L)
+{
+	BIGNUM *bn;
+
+	bn = luaBn_tobignum(L, 1);
+	lua_pushboolean(L, BN_is_zero(bn));
+
+	return 1;
+}
+
+static int
 f_eq(lua_State *L)
 {
 	BIGNUM *bn[3]; /* bn[1] == bn[2] */
@@ -1112,6 +1134,8 @@ static luaL_reg bn_methods[] = {
 	{ "isneg",    f_isneg    },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
+	{ "isone",    f_isone    },
+	{ "iszero",   f_iszero   },
 	{ "eq",       f_eq       },
 	{ "modadd",   f_modadd   },
 	{ "modsub",   f_modsub   },
@@ -1137,6 +1161,8 @@ static luaL_reg bn_functions[] = {
 	{ "isneg",    f_isneg    },
 	{ "iseven",   f_iseven   },
 	{ "isodd",    f_isodd    },
+	{ "isone",    f_isone    },
+	{ "iszero",   f_iszero   },
 	{ "eq",       f_eq       },
 	{ "modadd",   f_modadd   },
 	{ "modsub",   f_modsub   },
