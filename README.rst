@@ -20,6 +20,7 @@ Lua API
     local bn = require "bn"
 
 ::
+
         -- These variable exist for notation purposes only.
         local n, s, b, a = ... -- Lua "number", "string", "bn.number" type and any of these type
 
