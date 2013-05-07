@@ -19,7 +19,7 @@ Lua API
 
      local n, s, b, a = ... -- Lua "number", "string", "bn.number" type and any of these type
 
-     bn.number(n), bn.number(s) - create "bn.number" type from Lua number or string
+     bn.number(n), bn.number(s) - create bignum object from Lua number or string
 
      b:tostring(), b:__tostring() - convert bignum to string
 
