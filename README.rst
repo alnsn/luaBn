@@ -10,9 +10,9 @@ C API
 
     -lluaBn -lcrypto
 
-     int luaBn_open(lua_State \*L);
+    int luaBn_open(lua_State \*L);
 
-     BIGNUM \*luaBn_tobignum(lua_State \*L, int narg);
+    BIGNUM \*luaBn_tobignum(lua_State \*L, int narg);
 
 Lua API
 =======
