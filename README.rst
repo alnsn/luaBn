@@ -19,9 +19,9 @@ Lua API
 
      local bn = require "bn"
 
-     -- For notation purposes
+     ``--`` For notation purposes
 
-     local n, s, b, a = ... -- Lua "number", "string", "bn.number" type and any of these type
+     local n, s, b, a = ... ``--`` Lua "number", "string", "bn.number" type and any of these type
 
      bn.number(n), bn.number(s) - create bignum object from Lua number or string
 
