@@ -6,6 +6,8 @@ Lua binding for openssl bn library
 C API
 =====
 
+    #include <luaBn.h>
+
     -lluaBn -lcrypto
 
      int luaBn_open(lua_State \*L);
