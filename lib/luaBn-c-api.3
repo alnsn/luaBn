@@ -27,12 +27,11 @@
 .\"
 .Dd May 7, 2013
 .Dt luaBn-c-api 3
-.Os
 .Sh NAME
 .Nm luaBn-c-api
 .Nd C interface of the luaBn library
 .Sh LIBRARY
-.Lb -lluaBn -lcrypto
+luaBn Library (luaBn, \-lluaBn \-lcrypto)
 .Sh SYNOPSIS
 .In luaBn.h
 .Ft int
@@ -40,7 +39,27 @@
 .Ft BIGNUM *
 .Fn luaBn_tobignum "lua_State *L" "int narg"
 .Sh DESCRIPTION
+The
 .Nm
 specifies C interface of the luaBn library.
+.Pp
+In order yo use the library, you should initialize it with
+.Fn luaBn_open .
+It's recommended to call
+.Xr ERR_load_BN_strings 3
+prior to calling
+.Fn luaBn_open
+for a better error reporting.
+The library uses Lua state for storing global variables (such as
+.Xr BN_CTX 3
+objects) and it's possible to have multiple instances of the library
+open in multiple Lua states and running in multiple threads.
+.Pp
+Lua string, number or bn.bignum object can be converted to
+.Xr BIGNUM 3
+object using
+.Fn luaBn_tobignum
+function.
+.Pp
 .Sh AUTHORS
 .An Alexander Nasonov Aq alnsn@yandex.ru
