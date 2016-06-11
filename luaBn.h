@@ -27,16 +27,14 @@
  * SUCH DAMAGE.
  */
 
-#include "luaBn.h"
+#ifndef LUABN_H_INCLUDED
+#define LUABN_H_INCLUDED
 
 #include <lua.h>
-#include <openssl/err.h>
+#include <openssl/bn.h>
 
+int luaBn_open(lua_State *);
 int luaopen_bn(lua_State *);
+BIGNUM *luaBn_tobignum(lua_State *, int);
 
-int luaopen_bn(lua_State *L)
-{
-
-	ERR_load_BN_strings();
-	return luaBn_open(L);
-}
+#endif

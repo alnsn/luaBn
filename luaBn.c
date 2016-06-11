@@ -1286,3 +1286,10 @@ int luaBn_open(lua_State *L)
 
 	return 1;
 }
+
+int luaopen_bn(lua_State *L)
+{
+
+	ERR_load_BN_strings();
+	return luaBn_open(L);
+}
