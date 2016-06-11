@@ -2,6 +2,7 @@
 
 DSO?=		so  # or dylib
 LUAPKG?=	lua # pkg-config name
+SSLPKG?=	openssl
 
 WARNS?=		-Wall -Wextra
 PICFLAGS?=	-fPIC
@@ -17,12 +18,12 @@ CMODNAME=	bn.$(DSO) # XXX ln
 .SUFFIXES: .c .o
 
 .c.o:
-	$(CC) `pkg-config --cflags $(LUAPKG)` $(XCFLAGS) $(PICFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) `pkg-config --cflags $(SSLPKG) $(LUAPKG)` $(XCFLAGS) $(PICFLAGS) $(CFLAGS) -c $< -o $@
 
 all: $(LIBNAME)
 
 $(LIBNAME): $(OBJ)
-	$(CC)  `pkg-config --cflags --libs $(LUAPKG)` $(PICLDFLAGS) $(LDFLAGS) -shared $(OBJ) -o $@
+	$(CC)  `pkg-config --cflags --libs $(SSLPKG) $(LUAPKG)` $(PICLDFLAGS) $(LDFLAGS) -shared $(OBJ) -o $@
 
 clean:
 	rm -f $(OBJ) $(LIBNAME)
