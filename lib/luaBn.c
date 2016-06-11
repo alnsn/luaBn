@@ -128,6 +128,19 @@ testbignum(lua_State *L, int narg)
 }
 
 /*
+ * luaL_typerror() was removed after 5.1.
+ */
+static int
+typerror(lua_State *L, int narg, const char *tname)
+{
+	const char *msg;
+
+	msg = lua_pushfstring(L, "%s expected, got %s",
+	    tname, luaL_typename(L, narg));
+	return luaL_argerror(L, narg, msg);
+}
+
+/*
  * Converts absolute or relative stack index to absolute index.
  */
 static inline int
@@ -320,7 +333,7 @@ luaBn_tobignum(lua_State *L, int narg)
 		case LUA_TUSERDATA: return checkbignum(L, narg);
 	}
 
-	luaL_typerror(L, narg, "number, string or " BN_METATABLE);
+	typerror(L, narg, "number, string or " BN_METATABLE);
 	return NULL;
 }
 
@@ -1064,7 +1077,7 @@ f_swap(lua_State *L)
 
 	for (i = 1; i <= 2; i++) {
 		if (testbignum(L, i) == NULL)
-			return luaL_typerror(L, i, BN_METATABLE);
+			return typerror(L, i, BN_METATABLE);
 	}
 
 	a = &getbn(L, 1)->bignum;
@@ -1108,7 +1121,7 @@ gcctx(lua_State *L)
 	return 0;
 }
 
-static luaL_reg bn_metafunctions[] = {
+static luaL_Reg bn_metafunctions[] = {
 	{ "__gc",       gcbn       },
 	{ "__add",      mt_add     },
 	{ "__div",      mt_div     },
@@ -1123,7 +1136,7 @@ static luaL_reg bn_metafunctions[] = {
 	{ NULL, NULL}
 };
 
-static luaL_reg bn_methods[] = {
+static luaL_Reg bn_methods[] = {
 	{ "add",      f_add      },
 	{ "div",      f_div      },
 	{ "mul",      f_mul      },
@@ -1150,7 +1163,7 @@ static luaL_reg bn_methods[] = {
 	{ NULL, NULL}
 };
 
-static luaL_reg bn_functions[] = {
+static luaL_Reg bn_functions[] = {
 	{ "add",      f_add      },
 	{ "div",      f_div      },
 	{ "mul",      f_mul      },
@@ -1176,26 +1189,34 @@ static luaL_reg bn_functions[] = {
 	{ NULL, NULL}
 };
 
-static luaL_reg ctx_metafunctions[] = {
+static luaL_Reg ctx_metafunctions[] = {
 	{ "__gc", gcctx },
 	{ NULL, NULL}
 };
 
 static int
 register_udata(lua_State *L, const char *tname,
-    const luaL_reg *metafunctions, const luaL_reg *methods)
+    const luaL_Reg *metafunctions, const luaL_Reg *methods)
 {
 
 	luaL_newmetatable(L, tname);
 
-	if (metafunctions != NULL)
+	if (metafunctions != NULL) {
+#if LUA_VERSION_NUM <= 501
 		luaL_register(L, NULL, metafunctions);
+#else
+		luaL_setfuncs(L, metafunctions, 0);
+#endif
+	}
 
 	if (methods != NULL) {
-		/* XXX luaL_register is deprecated in version 5.2. */
 		lua_pushstring(L, "__index");
 		lua_newtable(L);
+#if LUA_VERSION_NUM <= 501
 		luaL_register(L, NULL, methods);
+#else
+		luaL_setfuncs(L, methods, 0);
+#endif
 		lua_rawset(L, -3);
 	}
 
@@ -1251,8 +1272,11 @@ int luaBn_open(lua_State *L)
 	register_udata(L, BN_METATABLE, bn_metafunctions, bn_methods);
 	register_udata(L, CTX_METATABLE, ctx_metafunctions, NULL);
 
-	/* XXX luaL_register is deprecated in version 5.2. */
+#if LUA_VERSION_NUM <= 501
 	luaL_register(L, "bn", bn_functions);
+#else
+	luaL_newlib(L, bn_functions);
+#endif
 
 	init_ctx_val(L);
 
