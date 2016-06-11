@@ -10,7 +10,7 @@ PICLDFLAGS?=	-fPIC
 
 CPPFLAGS+=	-DNDEBUG
 XCFLAGS=	-I. $(CPPFLAGS) $(WARNS)
-
+ALLPKG=		$(LUAPKG) $(SSLPKG)
 OBJ=		luaBn.o
 LIBNAME=	libluaBn.$(DSO) # XXX major.minor.teeny
 CMODNAME=	bn.$(DSO) # XXX ln 
@@ -18,12 +18,12 @@ CMODNAME=	bn.$(DSO) # XXX ln
 .SUFFIXES: .c .o
 
 .c.o:
-	$(CC) `pkg-config --cflags $(SSLPKG) $(LUAPKG)` $(XCFLAGS) $(PICFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) `pkg-config --cflags $(ALLPKG)` $(XCFLAGS) $(PICFLAGS) $(CFLAGS) -c $< -o $@
 
 all: $(LIBNAME)
 
 $(LIBNAME): $(OBJ)
-	$(CC)  `pkg-config --cflags --libs $(SSLPKG) $(LUAPKG)` $(PICLDFLAGS) $(LDFLAGS) -shared $(OBJ) -o $@
+	$(CC)  `pkg-config --cflags --libs $(ALLPKG)` $(PICLDFLAGS) $(LDFLAGS) -shared $(OBJ) -o $@
 
 clean:
 	rm -f $(OBJ) $(LIBNAME)
